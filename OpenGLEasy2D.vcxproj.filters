@@ -13,10 +13,93 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="ソース ファイル\Easy">
+      <UniqueIdentifier>{c386c80a-8c58-4b3a-b5e5-4be58f02791a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Src\Main.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="Lib\Easy\Audio.cpp">
+      <Filter>ソース ファイル\Easy</Filter>
+    </ClCompile>
+    <ClCompile Include="Lib\Easy\Font.cpp">
+      <Filter>ソース ファイル\Easy</Filter>
+    </ClCompile>
+    <ClCompile Include="Lib\Easy\FrameAnimation.cpp">
+      <Filter>ソース ファイル\Easy</Filter>
+    </ClCompile>
+    <ClCompile Include="Lib\Easy\GLFWEW.cpp">
+      <Filter>ソース ファイル\Easy</Filter>
+    </ClCompile>
+    <ClCompile Include="Lib\Easy\Node.cpp">
+      <Filter>ソース ファイル\Easy</Filter>
+    </ClCompile>
+    <ClCompile Include="Lib\Easy\Shader.cpp">
+      <Filter>ソース ファイル\Easy</Filter>
+    </ClCompile>
+    <ClCompile Include="Lib\Easy\Sprite.cpp">
+      <Filter>ソース ファイル\Easy</Filter>
+    </ClCompile>
+    <ClCompile Include="Lib\Easy\Texture.cpp">
+      <Filter>ソース ファイル\Easy</Filter>
+    </ClCompile>
+    <ClCompile Include="Lib\Easy\TweenAnimation.cpp">
+      <Filter>ソース ファイル\Easy</Filter>
+    </ClCompile>
+    <ClCompile Include="Application.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="Command.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="Lib\Easy\BufferObject.cpp">
+      <Filter>ソース ファイル\Easy</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Lib\Easy\Audio.h">
+      <Filter>ソース ファイル\Easy</Filter>
+    </ClInclude>
+    <ClInclude Include="Lib\Easy\DXGIFormat.h">
+      <Filter>ソース ファイル\Easy</Filter>
+    </ClInclude>
+    <ClInclude Include="Lib\Easy\Font.h">
+      <Filter>ソース ファイル\Easy</Filter>
+    </ClInclude>
+    <ClInclude Include="Lib\Easy\FrameAnimation.h">
+      <Filter>ソース ファイル\Easy</Filter>
+    </ClInclude>
+    <ClInclude Include="Lib\Easy\GamePad.h">
+      <Filter>ソース ファイル\Easy</Filter>
+    </ClInclude>
+    <ClInclude Include="Lib\Easy\GLFWEW.h">
+      <Filter>ソース ファイル\Easy</Filter>
+    </ClInclude>
+    <ClInclude Include="Lib\Easy\Node.h">
+      <Filter>ソース ファイル\Easy</Filter>
+    </ClInclude>
+    <ClInclude Include="Lib\Easy\Shader.h">
+      <Filter>ソース ファイル\Easy</Filter>
+    </ClInclude>
+    <ClInclude Include="Lib\Easy\Sprite.h">
+      <Filter>ソース ファイル\Easy</Filter>
+    </ClInclude>
+    <ClInclude Include="Lib\Easy\Texture.h">
+      <Filter>ソース ファイル\Easy</Filter>
+    </ClInclude>
+    <ClInclude Include="Lib\Easy\TweenAnimation.h">
+      <Filter>ソース ファイル\Easy</Filter>
+    </ClInclude>
+    <ClInclude Include="Command.h">
+      <Filter>ソース ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Application.h">
+      <Filter>ソース ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="Lib\Easy\BufferObject.h">
+      <Filter>ソース ファイル\Easy</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

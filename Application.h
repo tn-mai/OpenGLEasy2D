@@ -1,0 +1,6 @@
+#ifndef APPLICATION_H_INCLUDED
+#define APPLICATION_H_INCLUDED
+
+void application();
+
+#endif // APPLICATION_H_INCLUDED
