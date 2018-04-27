@@ -23,6 +23,9 @@ void reset_all_text();
 * @param  x        表示位置(X座標).
 * @param  y        表示位置(Y座標).
 * @param  filename 画像ファイルの名前.
+*
+* noで指定した管理番号に既に別の画像を配置していた場合、
+* まずその画像を消去してから、改めてfilenameで指定した画像を配置する.
 */
 void set_image(int no, float x, float y, const char* filename);
 
@@ -33,13 +36,17 @@ void reset_all_image();
 
 /**
 * 画像を消す.
+*
+* @param  no 画像の管理番号.
+*
+* 対象の画像がすでに消されていた場合は何もしない.
 */
 void reset_image(int no);
 
 /**
 * 一定時間待つ.
 *
-* @param seconds 待ち時間(秒).
+* @param  seconds 待ち時間(秒).
 */
 void wait(float seconds);
 
@@ -54,6 +61,7 @@ void wait(float seconds);
 * @param  ...   みっつ以上の選択肢があるなら、カンマで区切って追加していく.
 *
 * @return 選択された項目の番号.
+*         ひとつめの選択肢を0番とする.
 */
 int select(int x, int y, int count, const char* a, const char* b, ...);
 
