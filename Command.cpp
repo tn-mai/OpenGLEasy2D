@@ -16,8 +16,84 @@ bool hasQuitRequest = false;
 
 namespace /* unnamed */ {
 
+enum easing_type
+{
+  linear,
+  ease_in,
+  ease_out,
+  ease_in_out
+};
+
+template<typename T>
+struct action
+{
+  T start;
+  T end;
+  easing_type easing;
+  float seconds;
+
+  float timer;
+
+  void init(const T& s, const T& e, easing_type ease, float sec) {
+    start = s;
+    end = e;
+    easing = ease;
+    seconds = sec;
+    timer = 0;
+  }
+
+  T update(float delta) {
+    if (seconds <= 0) {
+      return end;
+    }
+    timer = std::min(timer + delta, seconds);
+    float ratio = (timer / seconds);
+    switch (easing) {
+    default:
+    case linear: break;
+    case ease_in: ratio *= ratio;
+    case ease_out: ratio = 2.0f * ratio - ratio * ratio; break;
+    case ease_in_out:
+      ratio *= 2.0f;
+      if (ratio < 1.0f) {
+        ratio *= ratio;
+      } else {
+        ratio -= 1.0f;
+        ratio = 2.0f * ratio - ratio * ratio;
+        ratio += 1.0f;
+      }
+      ratio *= 0.5f;
+      break;
+    }
+    return start + (end - start) * ratio;
+  }
+};
+
+using translate_action = action<glm::vec2>;
+using scale_action = action<glm::vec2>;
+using rotate_action = action<float>;
+
+struct actable_sprite : Sprite
+{
+  translate_action translate;
+  scale_action scale;
+  rotate_action rotate;
+
+  void init_action() {
+    translate.init(Position(), Position(), linear, 0);
+    scale.init(Scale(), Scale(), linear, 0);
+    rotate.init(Rotation(), Rotation(), linear, 0);
+  }
+
+  virtual void Update(glm::f32 delta) override {
+    Position(glm::vec3(translate.update(delta), 0));
+    Scale(scale.update(delta));
+    Rotation(rotate.update(delta));
+  }
+};
+
 Sprite rootNode;
-std::vector<Sprite> spriteBuffer;
+std::vector<actable_sprite> spriteBuffer;
 SpriteRenderer spriteRenderer;
 
 glm::vec2 textOrigin;
@@ -101,7 +177,32 @@ void set_image(int no, float x, float y, const char* filename)
   if (TexturePtr tex = Texture::LoadFromFile(str.c_str())) {
     spriteBuffer[no].Texture(tex);
     spriteBuffer[no].Position(glm::vec3(x, y, 0));
+    spriteBuffer[no].Scale(glm::vec2(1, 1));
+    spriteBuffer[no].Rotation(0);
+    spriteBuffer[no].Color(glm::vec4(1, 1, 1, 1));
+    spriteBuffer[no].init_action();
   }
+}
+
+void move_image(int no, float x, float y, int easing, float seconds)
+{
+  auto& e = spriteBuffer[no];
+  e.translate.init(e.Position(), glm::vec2(x, y), static_cast<easing_type>(easing), seconds);
+  e.Position(glm::vec3(e.translate.update(0), 0));
+}
+
+void scale_image(int no, float x, float y, int easing, float seconds)
+{
+  auto& e = spriteBuffer[no];
+  e.scale.init(e.Scale(), glm::vec2(x, y), static_cast<easing_type>(easing), seconds);
+  e.Scale(e.scale.update(0));
+}
+
+void rotate_image(int no, float degree, int easing, float seconds)
+{
+  auto& e = spriteBuffer[no];
+  e.rotate.init(e.Rotation(), degree, static_cast<easing_type>(easing), seconds);
+  e.Rotation(e.rotate.update(0));
 }
 
 void reset_image(int no)

@@ -30,6 +30,78 @@ void reset_all_text();
 void set_image(int no, float x, float y, const char* filename);
 
 /**
+* 画像を移動する.
+*
+* @param  no      画像の管理番号.
+* @param  x       移動先のX座標.
+* @param  y       移動先のY座標.
+* @param  easing  補間方法:
+*                   0 等速で移動.
+*                   1 加速しながら移動.
+*                   2 減速しながら移動.
+*                   3 加速しながら移動を始めて、減速しながら停止する.
+* @param  seconds 動作時間(秒).
+*/
+void move_image(int no, float x, float y, int easing, float seconds);
+
+/**
+* 画像を拡大・縮小する.
+*
+* @param  no      画像の管理番号.
+* @param  x       拡大・縮小後のX方向の大きさ.
+* @param  y       拡大・縮小後のY方向の大きさ..
+* @param  easing  補間方法:
+*                   0 等速で拡大・縮小.
+*                   1 加速しながら拡大・縮小.
+*                   2 減速しながら拡大・縮小.
+*                   3 加速しながら拡大・縮小を始めて、減速しながら停止する.
+* @param  seconds 動作時間(秒).
+*/
+void scale_image(int no, float x, float y, int easing, float seconds);
+
+/**
+* 画像を回転する.
+*
+* @param  no      画像の管理番号.
+* @param  degree  回転させる角度(度数法).
+* @param  easing  補間方法:
+*                   0 等速で回転.
+*                   1 加速しながら回転.
+*                   2 減速しながら回転.
+*                   3 加速しながら回転を始めて、減速しながら停止する.
+* @param  seconds 動作時間(秒).
+*/
+void rotate_image(int no, float degree, int easing, float seconds);
+
+/**
+* 画像にカラーフィルターを設定する.
+*
+* @param  no    画像の管理番号.
+* @param  red   フィルターの赤成分(0.0～1.0).
+* @param  green フィルターの緑成分(0.0～1.0).
+* @param  blue  フィルターの青成分(0.0～1.0).
+* @param  alpha フィルターの透明度(0.0～1.0).
+*/
+void color_filter(int no, float red, float green, float blue, float alpha);
+
+/**
+* 画面をフェードアウトする.
+*
+* @param  red     フェードアウトフィルターの赤成分(0.0～1.0).
+* @param  green   フェードアウトフィルターの緑成分(0.0～1.0).
+* @param  blue    フェードアウトフィルターの青成分(0.0～1.0).
+* @param  seconds 動作時間(秒).
+*/
+void fade_out(float red, float green, float blue, float seconds);
+
+/**
+* 画面をフェードインする.
+*
+* @param  seconds 動作時間(秒).
+*/
+void fade_in(float seconds);
+
+/**
 * すべての画像を消す.
 */
 void reset_all_image();

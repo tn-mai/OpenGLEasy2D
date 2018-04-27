@@ -23,10 +23,12 @@ void application()
 
   // あいこフラグがtrueなら"あいこで"画像を表示. falseなら"じゃんけん"画像を表示.
   if (aiko_flag) {
-    set_image(1, 0, 100, "janken_aikode.png");
+    set_image(1, 0, 400, "janken_aikode.png");
   } else {
-    set_image(1, 0, 100, "janken.png");
+    set_image(1, 0, 400, "janken.png");
   }
+  move_image(1, 0, 100, 1, 1.0f);
+  wait(1);
 
   set_text(-360, 260, "あなた(%d勝)", player_win_count);
   set_text(40, 260, "CPU(%d勝)", cpu_win_count);
@@ -51,6 +53,8 @@ void application()
   case 1: set_image(2, -200, 100, "janken_choki.png"); break;
   case 2: set_image(2, -200, 100, "janken_pa.png"); break;
   }
+  scale_image(2, 0, 0, 0, 0);
+  scale_image(2, 1, 1, 2, 0.25f);
 
   // 右側にCPUの手を表示
   switch (cpu_hand) {
@@ -58,6 +62,8 @@ void application()
   case 1: set_image(3, 200, 100, "janken_choki.png"); break;
   case 2: set_image(3, 200, 100, "janken_pa.png"); break;
   }
+  scale_image(3, 0, 0, 0, 0);
+  scale_image(3, 1, 1, 2, 0.25f);
 
   wait(2); // 2秒間待つ
 
