@@ -2,12 +2,6 @@
 #define COMMAND_H_INCLUDED
 
 /**
-* 文字を表示する範囲を設定する.
-*
-*/
-void set_text_area(int left, int top, int lines);
-
-/**
 * 文字を表示する.
 *
 * @param  x      表示開始位置の左端座標.
