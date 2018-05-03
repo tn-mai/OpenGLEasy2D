@@ -383,7 +383,8 @@ public:
   MFStreamSoundImpl() = default;
   bool Init(ComPtr<IXAudio2> xaudio, IMFAttributes* attributes, const wchar_t* filename)
   {
-    buf.resize(BUFFER_SIZE * MAX_BUFFER_COUNT);
+    buf.resize(MAX_BUFFER_COUNT);
+    curBuf = 0;
     // open media file.
     if (FAILED(MFCreateSourceReaderFromURL(filename, attributes, sourceReader.GetAddressOf()))) {
       return false;
@@ -493,19 +494,6 @@ public:
   };
 
   Result ReadFile() {
-    size_t right = 0;
-    size_t left = 0;
-    if (bufTop >= bufBottom) {
-      right = bufBottom;
-      left = buf.size() - bufTop;
-    } else {
-      right = 0;
-      left = bufBottom - bufTop;
-    }
-    if (left + right < BUFFER_SIZE * 2) {
-      return success;
-    }
-
     ComPtr<IMFSample> sample;
     DWORD flags = 0;
     if (FAILED(sourceReader->ReadSample(MF_SOURCE_READER_FIRST_AUDIO_STREAM, 0, nullptr, &flags, nullptr, sample.GetAddressOf()))) {
@@ -520,18 +508,13 @@ public:
       return readError;
     }
     BYTE* pAudioData = nullptr;
-    DWORD audioDataLength = 0;
-    if (FAILED(buffer->Lock(&pAudioData, nullptr, &audioDataLength))) {
+    if (FAILED(buffer->Lock(&pAudioData, nullptr, &buf[curBuf].length))) {
       return readError;
     }
-    if (left >= audioDataLength) {
-      std::copy(pAudioData, pAudioData + audioDataLength, &buf[bufTop]);
-      bufTop += audioDataLength;
-    } else {
-      std::copy(pAudioData, pAudioData + left, &buf[bufTop]);
-      std::copy(pAudioData + left, pAudioData + audioDataLength, &buf[0]);
-      bufTop = audioDataLength - left;
+    if (buf[curBuf].length > BUFFER_SIZE) {
+      return readError;
     }
+    std::copy(pAudioData, pAudioData + buf[curBuf].length, buf[curBuf].data);
     if (FAILED(buffer->Unlock())) {
       return readError;
     }
@@ -565,26 +548,22 @@ public:
         }
       } else {
         isEndOfStream = true;
+        return true;
       }
     }
 
     XAUDIO2_BUFFER buffer = {};
-    buffer.pAudioData = &buf[bufBottom];
-    const size_t availableBytes = bufTop > bufBottom ? (bufTop - bufBottom) : (bufTop + buf.size() - bufBottom);
-    if (availableBytes >= BUFFER_SIZE) {
+    buffer.pAudioData = buf[curBuf].data;
+    buffer.AudioBytes = buf[curBuf].length;
+    if (!isEndOfStream) {
       buffer.Flags = 0;
-      buffer.AudioBytes = BUFFER_SIZE;
     } else {
       buffer.Flags = XAUDIO2_END_OF_STREAM;
-      buffer.AudioBytes = availableBytes;
     }
     sourceVoice->SubmitSourceBuffer(&buffer, nullptr);
 
     currentPos += buffer.AudioBytes;
-    bufBottom += BUFFER_SIZE;
-    if (bufBottom >= buf.size()) {
-      bufBottom -= buf.size();
-    }
+    curBuf = (curBuf + 1) % MAX_BUFFER_COUNT;
     return true;
   }
 
@@ -592,15 +571,18 @@ public:
 
   IXAudio2SourceVoice* sourceVoice = nullptr;
 
-  static const size_t BUFFER_SIZE = 0x10000;
-  static const int MAX_BUFFER_COUNT = 6;
+  static const size_t BUFFER_SIZE = 0x20000;
+  static const int MAX_BUFFER_COUNT = 3;
+  struct Sample {
+    uint8_t data[BUFFER_SIZE];
+    DWORD length;
+  };
 
   int state = State_Create;
   bool loop = false;
   bool isEndOfStream = false;
-  std::vector<uint8_t> buf;
-  size_t bufTop = 0;
-  size_t bufBottom = 0;
+  std::vector<Sample> buf;
+  size_t curBuf = 0;
   size_t currentPos = 0;
 };
 
