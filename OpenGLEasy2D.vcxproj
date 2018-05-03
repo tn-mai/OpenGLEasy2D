@@ -86,7 +86,7 @@
     <PostBuildEvent>
       <Command>if not exist "$(TargetDir)glfw3.dll" xcopy "$(ProjectDir)Lib\glfw-3.2.1\lib\$(ConfigurationName)\$(PlatformName)\glfw3.dll" "$(TargetDir)"
 if not exist "$(TargetDir)glew32d.dll" xcopy "$(ProjectDir)Lib\glew-2.1.0\lib\$(ConfigurationName)\$(PlatformName)\glew32d.dll" "$(TargetDir)"
-if not exist "$(TargetDir)cri_ware_pcx86_le.dll" xcopy "$(ProjectDir)Lib\adx2le\lib\cri_ware_pcx86_le.dll" "$(TargetDir)"</Command>
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -118,7 +118,7 @@ if not exist "$(TargetDir)cri_ware_pcx86_le.dll" xcopy "$(ProjectDir)Lib\adx2le\
     <PostBuildEvent>
       <Command>if not exist "$(TargetDir)glfw3.dll" xcopy "$(ProjectDir)Lib\glfw-3.2.1\lib\$(ConfigurationName)\$(PlatformName)\glfw3.dll" "$(TargetDir)"
 if not exist "$(TargetDir)glew32.dll" xcopy "$(ProjectDir)Lib\glew-2.1.0\lib\$(ConfigurationName)\$(PlatformName)\glew32.dll" "$(TargetDir)"
-if not exist "$(TargetDir)cri_ware_pcx86_le.dll" xcopy "$(ProjectDir)Lib\adx2le\lib\cri_ware_pcx86_le.dll" "$(TargetDir)"</Command>
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
