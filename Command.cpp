@@ -5,6 +5,7 @@
 #include "GLFWEW.h"
 #include "Sprite.h"
 #include "Font.h"
+#include "Audio.h"
 #include <vector>
 #include <string>
 #include <memory>
@@ -21,7 +22,9 @@ enum easing_type
   linear,
   ease_in,
   ease_out,
-  ease_in_out
+  ease_in_out,
+  ease_out_back,
+  ease_out_bounce,
 };
 
 template<typename T>
@@ -34,10 +37,10 @@ struct action
 
   float timer;
 
-  void init(const T& s, const T& e, easing_type ease, float sec) {
+  void init(const T& s, const T& e, int ease, float sec) {
     start = s;
     end = e;
-    easing = ease;
+    easing = static_cast<easing_type>(glm::clamp(ease, 0, static_cast<int>(ease_out_bounce)));
     seconds = sec;
     timer = 0;
   }
@@ -64,6 +67,27 @@ struct action
       }
       ratio *= 0.5f;
       break;
+    case ease_out_back: {
+      static const float scale = 1.70158f * 1.525f;
+      ratio -= 1;
+      ratio = 1 + 2.70158f * ratio * ratio * ratio + 1.70158f * ratio * ratio;
+      break;
+    }
+    case ease_out_bounce: {
+      if (ratio < (1 / 2.75f)) {
+        ratio = 7.5625f * ratio * ratio;
+      } else if (ratio < (2 / 2.75f)) {
+        ratio -= 1.5f / 2.75f;
+        ratio = 7.5625f * ratio * ratio + 0.75f;
+      } else if (ratio < (2.5 / 2.75f)) {
+        ratio -= 2.25f / 2.75f;
+        ratio = 7.5625f * ratio * ratio + 0.9375f;
+      } else {
+        ratio -= 2.625f / 2.75f;
+        ratio = 7.5625f * ratio * ratio + 0.984375f;
+      }
+      break;
+    }
     }
     return start + (end - start) * ratio;
   }
@@ -72,29 +96,49 @@ struct action
 using translate_action = action<glm::vec2>;
 using scale_action = action<glm::vec2>;
 using rotate_action = action<float>;
+using color_action = action<glm::vec4>;
 
 struct actable_sprite : Sprite
 {
   translate_action translate;
   scale_action scale;
   rotate_action rotate;
+  color_action color;
 
   void init_action() {
     translate.init(Position(), Position(), linear, 0);
     scale.init(Scale(), Scale(), linear, 0);
     rotate.init(Rotation(), Rotation(), linear, 0);
+    color.init(Color(), Color(), linear, 0);
   }
 
   virtual void Update(glm::f32 delta) override {
+    Sprite::Update(delta);
     Position(glm::vec3(translate.update(delta), 0));
     Scale(scale.update(delta));
     Rotation(rotate.update(delta));
+    Color(color.update(delta));
+  }
+};
+
+struct color_filter : Sprite
+{
+  action<glm::f32> action;
+
+  virtual void Update(glm::f32 delta) override {
+    Sprite::Update(delta);
+    glm::vec4 c = Color();
+    c.w = action.update(delta);
+    Color(c);
   }
 };
 
 Sprite rootNode;
 std::vector<actable_sprite> spriteBuffer;
 SpriteRenderer spriteRenderer;
+
+color_filter colorFilter;
+SpriteRenderer colorFilterRenderer;
 
 glm::vec2 textOrigin;
 int maxTextLines;
@@ -108,6 +152,9 @@ std::vector<text_info> textList;
 Font::Renderer fontRenderer;
 
 std::mt19937 randomEngine;
+
+std::string bgmFilename;
+Audio::SoundPtr bgm;
 
 } // unnamed namespace
 
@@ -133,15 +180,71 @@ glm::vec2 screen_coord_to_clip_coord(glm::vec2 pos)
   return pos;
 }
 
+template<typename T>
+void main_loop(T func)
+{
+  const glm::vec2 invColorFilterSize = glm::vec2(1, 1) / glm::vec2(colorFilter.Texture()->Width(), colorFilter.Texture()->Height());
+
+  GLFWEW::Window& window = GLFWEW::Window::Instance();
+  for (;;) {
+    Audio::Engine::Get().Update();
+    window.Update();
+    const GamePad gamepad = window.GetGamePad();
+    if (window.ShouldClose() || (gamepad.buttonDown & GamePad::ESC)) {
+      quit();
+      exit(0);
+      break;
+    }
+
+    if (func()) {
+      break;
+    }
+
+    const float deltaTime = window.DeltaTime();
+    rootNode.UpdateTransform();
+    rootNode.UpdateRecursive(deltaTime);
+    spriteRenderer.Update(rootNode);
+
+    const glm::vec2 windowSize(window.Width(), window.Height());
+
+    colorFilter.UpdateTransform();
+    colorFilter.UpdateRecursive(deltaTime);
+    colorFilter.Scale(windowSize * invColorFilterSize);
+    colorFilterRenderer.Update(colorFilter);
+
+    glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    spriteRenderer.Draw(windowSize);
+    fontRenderer.Draw();
+    colorFilterRenderer.Draw(windowSize);
+
+    window.SwapBuffers();
+  }
+}
+
 void initialize()
 {
   setlocale(LC_CTYPE, "JPN");
   Texture::Initialize();
+
+  static const uint32_t planeTexData[] = {
+    0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
+    0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
+    0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
+    0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
+  };
+
   spriteRenderer.Init(1024);
   spriteBuffer.resize(1024);
   for (auto&& e : spriteBuffer) {
     rootNode.AddChild(&e);
   }
+
+  colorFilterRenderer.Init(1);
+  colorFilter.Texture(Texture::Create(4, 4, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE, planeTexData));
+  colorFilter.Color(glm::vec4(0, 0, 0, 0));
+  colorFilter.action.init(0, 0, linear, 0);
+
   const GLFWEW::Window& window = GLFWEW::Window::Instance();
   fontRenderer.Init(1024, glm::vec2(window.Width(), window.Height()));
   fontRenderer.LoadFromFile("Res/Font/font.fnt");
@@ -187,22 +290,29 @@ void set_image(int no, float x, float y, const char* filename)
 void move_image(int no, float x, float y, int easing, float seconds)
 {
   auto& e = spriteBuffer[no];
-  e.translate.init(e.Position(), glm::vec2(x, y), static_cast<easing_type>(easing), seconds);
+  e.translate.init(e.Position(), glm::vec2(x, y), easing, seconds);
   e.Position(glm::vec3(e.translate.update(0), 0));
 }
 
 void scale_image(int no, float x, float y, int easing, float seconds)
 {
   auto& e = spriteBuffer[no];
-  e.scale.init(e.Scale(), glm::vec2(x, y), static_cast<easing_type>(easing), seconds);
+  e.scale.init(e.Scale(), glm::vec2(x, y), easing, seconds);
   e.Scale(e.scale.update(0));
 }
 
 void rotate_image(int no, float degree, int easing, float seconds)
 {
   auto& e = spriteBuffer[no];
-  e.rotate.init(e.Rotation(), degree, static_cast<easing_type>(easing), seconds);
+  e.rotate.init(e.Rotation(), degree, easing, seconds);
   e.Rotation(e.rotate.update(0));
+}
+
+void color_blend_image(int no, float red, float green, float blue, float alpha, int mode, int easing, float seconds)
+{
+  auto& e = spriteBuffer[no];
+  e.ColorMode(static_cast<BlendMode>(glm::clamp(mode, 0, 2)));
+  e.color.init(e.Color(), glm::vec4(red, green, blue, alpha), easing, seconds);
 }
 
 void reset_image(int no)
@@ -217,39 +327,33 @@ void reset_all_image()
   }
 }
 
+void fade_out(float red, float green, float blue, float seconds)
+{
+  colorFilter.Color(glm::vec4(red, green, blue, 0));
+  colorFilter.action.init(0, 1, linear, seconds);
+  wait(seconds);
+}
+
+void fade_in(float seconds)
+{
+  colorFilter.action.init(1, 0, linear, seconds);
+  wait(seconds);
+}
+
 void wait(float seconds)
 {
-  GLFWEW::Window& window = GLFWEW::Window::Instance();
-  for (;;) {
-    window.Update();
-    seconds -= window.DeltaTime();
-    if (seconds <= 0) {
-      return;
-    }
-    if (window.ShouldClose() || (window.GetGamePad().buttonDown & GamePad::ESC)) {
-      quit();
-      exit(0);
-      return;
-    }
-
-    rootNode.UpdateTransform();
-    rootNode.UpdateRecursive(window.DeltaTime());
-    spriteRenderer.Update(rootNode);
-
-    fontRenderer.Color(glm::vec4(1));
-    fontRenderer.MapBuffer();
-    for (const auto& e : textList) {
-      fontRenderer.AddString(e.pos, e.text.c_str());
-    }
-    fontRenderer.UnmapBuffer();
-
-    glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-    spriteRenderer.Draw(glm::vec2(window.Width(), window.Height()));
-    fontRenderer.Draw();
-
-    window.SwapBuffers();
+  fontRenderer.Color(glm::vec4(1));
+  fontRenderer.MapBuffer();
+  for (const auto& e : textList) {
+    fontRenderer.AddString(e.pos, e.text.c_str());
   }
+  fontRenderer.UnmapBuffer();
+
+  main_loop([&seconds] {
+    GLFWEW::Window& window = GLFWEW::Window::Instance();
+    seconds -= window.DeltaTime();
+    return seconds <= 0;
+  });
 }
 
 int select(int x, int y, int count, const char* a, const char* b, ...)
@@ -269,15 +373,8 @@ int select(int x, int y, int count, const char* a, const char* b, ...)
   const glm::vec2 textPosOrigin = screen_coord_to_clip_coord(glm::vec2(x, y));
   int select = 0;
   GLFWEW::Window& window = GLFWEW::Window::Instance();
-  for (;;) {
-    window.Update();
+  main_loop([&] {
     const GamePad gamepad = window.GetGamePad();
-    if (window.ShouldClose() || (gamepad.buttonDown & GamePad::ESC)) {
-      quit();
-      exit(0);
-      return 0;
-    }
-
     if (gamepad.buttonDown & GamePad::DPAD_UP) {
       if (--select < 0) {
         select = static_cast<int>(selectionList.size() - 1);
@@ -287,12 +384,8 @@ int select(int x, int y, int count, const char* a, const char* b, ...)
         select = 0;
       }
     } else if (gamepad.buttonDown & (GamePad::A | GamePad::START)) {
-      break;
+      return true;
     }
-
-    rootNode.UpdateTransform();
-    rootNode.UpdateRecursive(window.DeltaTime());
-    spriteRenderer.Update(rootNode);
 
     fontRenderer.Color(glm::vec4(1));
     fontRenderer.MapBuffer();
@@ -303,19 +396,13 @@ int select(int x, int y, int count, const char* a, const char* b, ...)
     glm::vec2 textPos(textPosOrigin);
     const float nextLineOffset = 32.0f / static_cast<float>(window.Height() / 2);
     for (int i = 0; i < static_cast<int>(selectionList.size()); ++i) {
-      fontRenderer.Color(i == select ? glm::vec4(1,1,1,1) : glm::vec4(0.5f, 0.5f, 0.5f,1));
+      fontRenderer.Color(i == select ? glm::vec4(1, 1, 1, 1) : glm::vec4(0.5f, 0.5f, 0.5f, 1));
       fontRenderer.AddString(textPos, selectionList[i].c_str());
       textPos.y -= nextLineOffset;
     }
     fontRenderer.UnmapBuffer();
-
-    glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-    spriteRenderer.Draw(glm::vec2(window.Width(), window.Height()));
-    fontRenderer.Draw();
-
-    window.SwapBuffers();
-  }
+    return false;
+  });
   return select;
 }
 
@@ -326,6 +413,16 @@ int random(int min, int max)
 
 void quit()
 {
+  bgm.reset();
   hasQuitRequest = true;
   Texture::Finalize();
+}
+
+void play_bgm(const char* filename) {
+  if (bgmFilename != filename || !(bgm->GetState() & Audio::State_Playing)) {
+    bgmFilename = filename;
+    const std::wstring ws = sjis_to_utf16(filename);
+    bgm = Audio::Engine::Get().PrepareMFStream(ws.c_str());
+    bgm->Play(Audio::Flag_Loop);
+  }
 }

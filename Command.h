@@ -40,6 +40,8 @@ void set_image(int no, float x, float y, const char* filename);
 *                   1 加速しながら移動.
 *                   2 減速しながら移動.
 *                   3 加速しながら移動を始めて、減速しながら停止する.
+*                   4 1に似ているが、少し行き過ぎてから戻ってきて停止する.
+*                   5 1に似ているが、移動先座標で何度か弾んでから停止する.
 * @param  seconds 動作時間(秒).
 */
 void move_image(int no, float x, float y, int easing, float seconds);
@@ -55,6 +57,8 @@ void move_image(int no, float x, float y, int easing, float seconds);
 *                   1 加速しながら拡大・縮小.
 *                   2 減速しながら拡大・縮小.
 *                   3 加速しながら拡大・縮小を始めて、減速しながら停止する.
+*                   4 1に似ているが、少し拡大・縮小し過ぎてから戻ってきて停止する.
+*                   5 1に似ているが、何度か弾むように拡大・縮小しなから停止する.
 * @param  seconds 動作時間(秒).
 */
 void scale_image(int no, float x, float y, int easing, float seconds);
@@ -69,20 +73,48 @@ void scale_image(int no, float x, float y, int easing, float seconds);
 *                   1 加速しながら回転.
 *                   2 減速しながら回転.
 *                   3 加速しながら回転を始めて、減速しながら停止する.
+*                   4 1に似ているが、少し回転し過ぎてから戻ってきて停止する.
+*                   5 1に似ているが、何度か弾みなから停止する.
 * @param  seconds 動作時間(秒).
 */
 void rotate_image(int no, float degree, int easing, float seconds);
 
 /**
-* 画像にカラーフィルターを設定する.
+* 画像と色を合成する.
 *
-* @param  no    画像の管理番号.
-* @param  red   フィルターの赤成分(0.0～1.0).
-* @param  green フィルターの緑成分(0.0～1.0).
-* @param  blue  フィルターの青成分(0.0～1.0).
-* @param  alpha フィルターの透明度(0.0～1.0).
+* @param  no      画像の管理番号.
+* @param  red     合成する色の赤成分(0.0～1.0).
+* @param  green   合成する色の緑成分(0.0～1.0).
+* @param  blue    合成する色の青成分(0.0～1.0).
+* @param  alpha   合成する色の透明度(0.0～1.0).
+* @param  mod     合成方法:
+*                   0 乗算
+*                   1 加算
+*                   2 減算
+* @param  easing  補間方法:
+*                   0 等速で色を合成.
+*                   1 加速しながら色を合成.
+*                   2 減速しながら色を合成.
+*                   3 加速しながら合成を始めて、減速しながら停止する.
+*                   4 1に似ているが、少し色を出し過ぎてから戻ってきて停止する.
+*                   5 1に似ているが、何度か弾むように合成しなから停止する.
+* @param  seconds 動作時間(秒).
 */
-void color_filter(int no, float red, float green, float blue, float alpha);
+void color_blend_image(int no, float red, float green, float blue, float alpha, int mode, int easing, float seconds);
+
+/**
+* すべての画像を消す.
+*/
+void reset_all_image();
+
+/**
+* 画像を消す.
+*
+* @param  no 画像の管理番号.
+*
+* 対象の画像がすでに消されていた場合は何もしない.
+*/
+void reset_image(int no);
 
 /**
 * 画面をフェードアウトする.
@@ -100,20 +132,6 @@ void fade_out(float red, float green, float blue, float seconds);
 * @param  seconds 動作時間(秒).
 */
 void fade_in(float seconds);
-
-/**
-* すべての画像を消す.
-*/
-void reset_all_image();
-
-/**
-* 画像を消す.
-*
-* @param  no 画像の管理番号.
-*
-* 対象の画像がすでに消されていた場合は何もしない.
-*/
-void reset_image(int no);
 
 /**
 * 一定時間待つ.
@@ -152,5 +170,6 @@ int random(int min, int max);
 */
 void quit();
 
+void play_bgm(const char*);
 
 #endif // COMMAND_H_INCLUDED

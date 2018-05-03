@@ -2,158 +2,747 @@
 * @file Audio.cpp
 */
 #include "Audio.h"
-#include <cri_adx2le.h>
+#include <xaudio2.h>
 #include <vector>
-#include <iostream>
-#include <cstdint>
+#include <list>
+#include <stdint.h>
+#include <wrl/client.h>
+#include <algorithm>
+
+#include <mfidl.h>
+#include <mfapi.h>
+#include <mfreadwrite.h>
+
+using Microsoft::WRL::ComPtr;
 
 namespace Audio {
 
-CriAtomExVoicePoolHn voicePool;
-CriAtomDbasId dbas = CRIATOMDBAS_ILLEGAL_ID;
-CriAtomExAcbHn acb;
-std::vector<CriAtomExPlayerHn> playerList;
-
-/**
-* オーディオシステム用エラーコールバック.
-*/
-void ErrorCallback(const CriChar8* errid, CriUint32 p1, CriUint32 p2,
-  CriUint32* parray)
-{
-  const CriChar8* err = criErr_ConvertIdToMessage(errid, p1, p2);
-  std::cerr << err << std::endl;
-}
-
-/**
-* オーディオシステム用アロケータ.
-*/
-void* Allocate(void* obj, CriUint32 size)
-{
-  return new uint8_t[size];
-}
-
-/**
-* オーディオシステム用デアロケータ.
-*/
-void Deallocate(void* obj, void* ptr)
-{
-  delete[] static_cast<uint8_t*>(ptr);
-}
-
-/**
-* オーディオシステムを初期化する.
-*
-* @param acfPath    ACFファイルのパス.
-* @param acbPath    ACBファイルのパス.
-* @param awbPath    AWBファイルのパス.
-* @param dspBusName D-BUS名.
-* @param playerCount 再生制御用プレイヤー数. 
-*
-* @retval true  初期化成功.
-* @retval false 初期化失敗.
-*/
-bool Initialize(const char* acfPath, const char* acbPath, const char* awbPath, const char* dspBusName, size_t playerCount)
-{
-  // エラーコールバックとメモリ管理関数を登録する.
-  criErr_SetCallback(ErrorCallback);
-  criAtomEx_SetUserAllocator(Allocate, Deallocate, nullptr);
-
-  // 初期化パラメータを設定してADX2 LEを初期化する.
-  CriFsConfig fsConfig;
-  CriAtomExConfig_WASAPI libConfig;
-  criFs_SetDefaultConfig(&fsConfig);
-  criAtomEx_SetDefaultConfig_WASAPI(&libConfig);
-  fsConfig.num_loaders = 64;
-  fsConfig.max_path = 1024;
-  libConfig.atom_ex.fs_config = &fsConfig;
-  libConfig.atom_ex.max_virtual_voices = 64;
-  criAtomEx_Initialize_WASAPI(&libConfig, nullptr, 0);
-  dbas = criAtomDbas_Create(nullptr, nullptr, 0);
-
-  // 設定ファイルを読み込む.
-  if (criAtomEx_RegisterAcfFile(nullptr, acfPath, nullptr, 0) == CRI_FALSE) {
-    return false;
+struct MediaFoundationInitialize {
+  MediaFoundationInitialize() {
+    success = SUCCEEDED(MFStartup(MF_VERSION, MFSTARTUP_LITE));
   }
-  criAtomEx_AttachDspBusSetting(dspBusName, nullptr, 0);
-
-  // 再生環境を設定する.
-  CriAtomExStandardVoicePoolConfig config;
-  criAtomExVoicePool_SetDefaultConfigForStandardVoicePool(&config);
-  config.num_voices = 16;
-  config.player_config.streaming_flag = CRI_TRUE;
-  config.player_config.max_sampling_rate = 48000 * 2;
-  voicePool = criAtomExVoicePool_AllocateStandardVoicePool(&config, nullptr, 0);
-  acb = criAtomExAcb_LoadAcbFile(nullptr, acbPath, nullptr, awbPath, nullptr, 0);
-
-  // 再生制御用プレイヤーを作成する.
-  playerList.resize(playerCount);
-  for (auto& e : playerList) {
-    e = criAtomExPlayer_Create(nullptr, nullptr, 0);
-  }
-  return true;
-}
-
-/**
-* オーディオシステムを破棄する.
-*/
-void Destroy()
-{
-  for (auto& e : playerList) {
-    if (e) {
-      criAtomExPlayer_Destroy(e);
-      e = nullptr;
+  ~MediaFoundationInitialize() {
+    if (success) {
+      MFShutdown();
     }
   }
-  if (acb) {
-    criAtomExAcb_Release(acb);
-    acb = nullptr;
-  }
-  if (voicePool) {
-    criAtomExVoicePool_Free(voicePool);
-    voicePool = nullptr;
-  }
-  criAtomEx_UnregisterAcf();
-  if (dbas != CRIATOMDBAS_ILLEGAL_ID) {
-    criAtomDbas_Destroy(dbas);
-    dbas = CRIATOMDBAS_ILLEGAL_ID;
-  }
-  criAtomEx_Finalize_WASAPI();
+  bool success;
+};
+
+const uint32_t FOURCC_RIFF_TAG = MAKEFOURCC('R', 'I', 'F', 'F');
+const uint32_t FOURCC_FORMAT_TAG = MAKEFOURCC('f', 'm', 't', ' ');
+const uint32_t FOURCC_DATA_TAG = MAKEFOURCC('d', 'a', 't', 'a');
+const uint32_t FOURCC_WAVE_FILE_TAG = MAKEFOURCC('W', 'A', 'V', 'E');
+const uint32_t FOURCC_XWMA_FILE_TAG = MAKEFOURCC('X', 'W', 'M', 'A');
+const uint32_t FOURCC_XWMA_DPDS = MAKEFOURCC('d', 'p', 'd', 's');
+
+struct RIFFChunk
+{
+	uint32_t tag;
+	uint32_t size;
+};
+
+/**
+* WAVデータ.
+*/
+struct WF
+{
+	union U {
+		WAVEFORMATEXTENSIBLE ext;
+		struct ADPCMWAVEFORMAT {
+			WAVEFORMATEX    wfx;
+			WORD            wSamplesPerBlock;
+			WORD            wNumCoef;
+			ADPCMCOEFSET    coef[7];
+		} adpcm;
+	} u;
+	size_t dataOffset;
+	size_t dataSize;
+	size_t seekOffset;
+	size_t seekSize;
+};
+
+typedef std::vector<uint8_t> BufferType;
+
+struct ScopedHandle
+{
+	ScopedHandle(HANDLE h) : handle(h == INVALID_HANDLE_VALUE ? 0 : h) {}
+	~ScopedHandle() { if (handle) { CloseHandle(handle); } }
+	operator HANDLE() { return handle; }
+	HANDLE handle;
+};
+
+bool Read(HANDLE hFile, void* buf, DWORD size)
+{
+	DWORD readSize;
+	if (!ReadFile(hFile, buf, size, &readSize, nullptr) || readSize != size) {
+		return false;
+	}
+	return true;
+}
+
+uint32_t GetWaveFormatTag(const WAVEFORMATEXTENSIBLE& wf)
+{
+	if (wf.Format.wFormatTag != WAVE_FORMAT_EXTENSIBLE) {
+		return wf.Format.wFormatTag;
+	}
+	return wf.SubFormat.Data1;
+}
+
+// フォーマット情報を取得
+bool LoadWaveFile(HANDLE hFile, WF& wf, std::vector<UINT32>& seekTable, std::vector<uint8_t>* source)
+{
+	RIFFChunk riffChunk;
+	if (!Read(hFile, &riffChunk, sizeof(riffChunk))) {
+		return false;
+	}
+	if (riffChunk.tag != FOURCC_RIFF_TAG) {
+		return false;
+	}
+
+	uint32_t fourcc;
+	if (!Read(hFile, &fourcc, sizeof(fourcc))) {
+		return false;
+	}
+	if (fourcc != FOURCC_WAVE_FILE_TAG && fourcc != FOURCC_XWMA_FILE_TAG) {
+		return false;
+	}
+
+	bool hasWaveFormat = false;
+	bool hasData = false;
+	bool hasDpds = false;
+	size_t offset = 12;
+	do {
+		if (SetFilePointer(hFile, offset, nullptr, FILE_BEGIN) != offset) {
+			return false;
+		}
+
+		RIFFChunk chunk;
+		if (!Read(hFile, &chunk, sizeof(chunk))) {
+			break;
+		}
+
+		if (chunk.tag == FOURCC_FORMAT_TAG) {
+			if (!Read(hFile, &wf.u, std::min(chunk.size, sizeof(WF::U)))) {
+				break;
+			}
+			switch (GetWaveFormatTag(wf.u.ext)) {
+			case WAVE_FORMAT_PCM:
+				wf.u.ext.Format.cbSize = 0;
+				/* FALLTHROUGH */
+			case WAVE_FORMAT_IEEE_FLOAT:
+			case WAVE_FORMAT_ADPCM:
+				wf.seekSize = 0;
+				wf.seekOffset = 0;
+				hasDpds = true;
+				break;
+			case WAVE_FORMAT_WMAUDIO2:
+			case WAVE_FORMAT_WMAUDIO3:
+				break;
+			default:
+				// このコードでサポートしないフォーマット.
+				return false;
+			}
+			hasWaveFormat = true;
+		}
+		else if (chunk.tag == FOURCC_DATA_TAG) {
+			wf.dataOffset = offset + sizeof(RIFFChunk);
+			wf.dataSize = chunk.size;
+			hasData = true;
+		}
+		else if (chunk.tag == FOURCC_XWMA_DPDS) {
+			wf.seekOffset = offset + sizeof(RIFFChunk);
+			wf.seekSize = chunk.size / 4;
+			hasDpds = true;
+		}
+		offset += chunk.size + sizeof(RIFFChunk);
+	} while (!hasWaveFormat || !hasData || !hasDpds);
+	if (!(hasWaveFormat && hasData && hasDpds)) {
+		return false;
+	}
+
+	if (wf.seekSize) {
+		seekTable.resize(wf.seekSize);
+		SetFilePointer(hFile, wf.seekOffset, nullptr, FILE_BEGIN);
+		if (!Read(hFile, seekTable.data(), wf.seekSize * 4)) {
+			return false;
+		}
+		// XWMAはPowerPC搭載のXBOX360用に開発されたため、データはビッグエンディアンになっている.
+		// X86はリトルエンディアンなので変換しなければならない.
+		for (auto& e : seekTable) {
+			e = _byteswap_ulong(e);
+		}
+	}
+	if (source) {
+		source->resize(wf.dataSize);
+		SetFilePointer(hFile, wf.dataOffset, nullptr, FILE_BEGIN);
+		if (!Read(hFile, source->data(), wf.dataSize)) {
+			return false;
+		}
+	}
+	return true;
 }
 
 /**
-* オーディオシステムの状態を更新する.
+* Soundの実装.
 */
-void Update()
+class SoundImpl : public Sound
 {
-  criAtomEx_ExecuteMain();
-}
+public:
+	SoundImpl() :
+		state(State_Create), sourceVoice(nullptr) {}
+	virtual ~SoundImpl() override {
+		if (sourceVoice) {
+			sourceVoice->DestroyVoice();
+		}
+	}
+	virtual bool Play(int flags) override {
+		if (!(state & State_Pausing)) {
+			Stop();
+			XAUDIO2_BUFFER buffer = {};
+			buffer.Flags = XAUDIO2_END_OF_STREAM;
+			buffer.AudioBytes = source.size();
+			buffer.pAudioData = source.data();
+			buffer.LoopCount = flags & Flag_Loop ? XAUDIO2_LOOP_INFINITE : XAUDIO2_NO_LOOP_REGION;
+			if (seekTable.empty()) {
+				if (FAILED(sourceVoice->SubmitSourceBuffer(&buffer))) {
+					return false;
+				}
+			} else {
+				const XAUDIO2_BUFFER_WMA seekInfo = { seekTable.data(), seekTable.size() };
+				if (FAILED(sourceVoice->SubmitSourceBuffer(&buffer, &seekInfo))) {
+					return false;
+				}
+			}
+		}
+		state = State_Playing;
+		return SUCCEEDED(sourceVoice->Start());
+	}
+	virtual bool Pause() override {
+		if (state & State_Playing) {
+			state |= State_Pausing;
+			return SUCCEEDED(sourceVoice->Stop());
+		}
+		return false;
+	}
+	virtual bool Seek() override {
+		return true;
+	}
+	virtual bool Stop() override {
+		if (state & State_Playing) {
+			if (!(state & State_Pausing) && FAILED(sourceVoice->Stop())) {
+				return false;
+			}
+			state = State_Stopped;
+			return SUCCEEDED(sourceVoice->FlushSourceBuffers());
+		}
+		return false;
+	}
+	virtual float SetVolume(float volume) override {
+		sourceVoice->SetVolume(volume);
+		return volume;
+	}
+	virtual float SetPitch(float pitch) override {
+		sourceVoice->SetFrequencyRatio(pitch);
+		return pitch;
+	}
+	virtual int GetState() const override {
+		XAUDIO2_VOICE_STATE s;
+		sourceVoice->GetState(&s);
+		return s.BuffersQueued ? state : (State_Stopped | State_Prepared);
+	}
+
+	int state;
+	IXAudio2SourceVoice* sourceVoice;
+	std::vector<uint8_t> source;
+	std::vector<UINT32> seekTable;
+};
 
 /**
-* 音声を再生する.
-*
-* @param playerId 再生に使用するプレイヤーのID.
-* @param cueId    再生するキューのID.
+* Soundの実装.
 */
-void Play(int playerId, int cueId)
+class StreamSoundImpl : public Sound
 {
-  if (playerId < 0 || playerId > static_cast<int>(playerList.size())) {
-    return;
-  }
-  criAtomExPlayer_SetCueId(playerList[playerId], acb, cueId);
-  criAtomExPlayer_Start(playerList[playerId]);
-}
+public:
+	StreamSoundImpl() = delete;
+	explicit StreamSoundImpl(HANDLE h) :
+		sourceVoice(nullptr), handle(h), state(State_Create), loop(false), currentPos(0), curBuf(0)
+	{
+		buf.resize(BUFFER_SIZE * MAX_BUFFER_COUNT);
+	}
+	virtual ~StreamSoundImpl() override {
+		if (sourceVoice) {
+			sourceVoice->DestroyVoice();
+		}
+	}
+	virtual bool Play(int flags) override {
+		if (!(state & State_Pausing)) {
+			Stop();
+		}
+		state = State_Playing;
+		loop = flags & Flag_Loop;
+		return SUCCEEDED(sourceVoice->Start());
+	}
+	virtual bool Pause() override {
+		if (state & State_Playing && !(state & State_Pausing)) {
+			state |= State_Pausing;
+			return SUCCEEDED(sourceVoice->Stop());
+		}
+		return false;
+	}
+	virtual bool Seek() override {
+		return true;
+	}
+	virtual bool Stop() override {
+		if (state & State_Playing) {
+			if (!(state & State_Pausing) && FAILED(sourceVoice->Stop())) {
+				return false;
+			}
+			state = State_Stopped;
+			return SUCCEEDED(sourceVoice->FlushSourceBuffers());
+		}
+		return false;
+	}
+	virtual float SetVolume(float volume) override {
+		sourceVoice->SetVolume(volume);
+		return volume;
+	}
+	virtual float SetPitch(float pitch) override {
+		sourceVoice->SetFrequencyRatio(pitch);
+		return pitch;
+	}
+	virtual int GetState() const override {
+		XAUDIO2_VOICE_STATE s;
+		sourceVoice->GetState(&s);
+		return s.BuffersQueued ? (state | State_Prepared) : State_Stopped;
+	}
+
+	bool Update() {
+		const DWORD cbValid = std::min(BUFFER_SIZE, dataSize - currentPos);
+		if (cbValid == 0) {
+			return false;
+		}
+		XAUDIO2_VOICE_STATE state;
+		sourceVoice->GetState(&state);
+		if (state.BuffersQueued < MAX_BUFFER_COUNT - 1) {
+			SetFilePointer(handle, dataOffset + currentPos, nullptr, FILE_BEGIN);
+
+			XAUDIO2_BUFFER buffer = {};
+			buffer.pAudioData = &buf[BUFFER_SIZE * curBuf];
+			buffer.Flags = cbValid == BUFFER_SIZE ? 0 : XAUDIO2_END_OF_STREAM;
+			if (seekTable.empty()) {
+				buffer.AudioBytes = cbValid;
+				if (!Read(handle, &buf[BUFFER_SIZE * curBuf], cbValid)) {
+					return false;
+				}
+				sourceVoice->SubmitSourceBuffer(&buffer, nullptr);
+				currentPos += cbValid;
+			}
+			else {
+				XAUDIO2_BUFFER_WMA bufWma = {};
+				bufWma.PacketCount = cbValid / packetSize;
+				bufWma.pDecodedPacketCumulativeBytes = seekTable.data() + (currentPos / packetSize);
+				buffer.AudioBytes = bufWma.PacketCount * packetSize;
+				if (!Read(handle, &buf[BUFFER_SIZE * curBuf], buffer.AudioBytes)) {
+					return false;
+				}
+				sourceVoice->SubmitSourceBuffer(&buffer, &bufWma);
+				currentPos += buffer.AudioBytes;
+			}
+			curBuf = (curBuf + 1) % MAX_BUFFER_COUNT;
+			if (loop && currentPos >= dataSize) {
+				currentPos = 0;
+			}
+		}
+		return true;
+	}
+
+	IXAudio2SourceVoice* sourceVoice;
+	std::vector<UINT32> seekTable;
+	ScopedHandle handle;
+	size_t dataSize;
+	size_t dataOffset;
+	size_t packetSize;
+
+	static const size_t BUFFER_SIZE = 0x10000;
+	static const int MAX_BUFFER_COUNT = 3;
+
+	int state;
+	bool loop;
+	std::vector<uint8_t> buf;
+	size_t currentPos;
+	int curBuf;
+};
 
 /**
-* 音声を停止する.
-*
-* @param playerId 再生を停止するプレイヤーのID.
+* Media Foundationを利用したストリームサウンドの実装.
 */
-void Stop(int playerId)
+class MFStreamSoundImpl : public Sound
 {
-  if (playerId < 0 || playerId > static_cast<int>(playerList.size())) {
-    return;
+public:
+  MFStreamSoundImpl() = default;
+  bool Init(ComPtr<IXAudio2> xaudio, IMFAttributes* attributes, const wchar_t* filename)
+  {
+    buf.resize(BUFFER_SIZE * MAX_BUFFER_COUNT);
+    // open media file.
+    if (FAILED(MFCreateSourceReaderFromURL(filename, attributes, sourceReader.GetAddressOf()))) {
+      return false;
+    }
+    ComPtr<IMFMediaType> nativeMediaType;
+    if (FAILED(sourceReader->GetNativeMediaType(MF_SOURCE_READER_FIRST_AUDIO_STREAM, 0, nativeMediaType.GetAddressOf()))) {
+      return false;
+    }
+    GUID majorType{};
+    if (FAILED(nativeMediaType->GetGUID(MF_MT_MAJOR_TYPE, &majorType))) {
+      return false;
+    }
+    if (majorType != MFMediaType_Audio) {
+      return false;
+    }
+    GUID subType{};
+    if (FAILED(nativeMediaType->GetGUID(MF_MT_SUBTYPE, &subType))) {
+      return false;
+    }
+    if (subType == MFAudioFormat_Float || subType == MFAudioFormat_PCM) {
+      // uncompressed format.
+    } else {
+      // compressed format.
+      ComPtr<IMFMediaType> partialMediaType;
+      if (FAILED(MFCreateMediaType(partialMediaType.GetAddressOf()))) {
+        return false;
+      }
+      if (FAILED(partialMediaType->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Audio))) {
+        return false;
+      }
+      if (FAILED(partialMediaType->SetGUID(MF_MT_SUBTYPE, MFAudioFormat_PCM))) {
+        return false;
+      }
+      if (FAILED(sourceReader->SetCurrentMediaType(MF_SOURCE_READER_FIRST_AUDIO_STREAM, nullptr, partialMediaType.Get()))) {
+        return false;
+      }
+    }
+    ComPtr<IMFMediaType> uncompressedMediaType;
+    if (FAILED(sourceReader->GetCurrentMediaType(MF_SOURCE_READER_FIRST_AUDIO_STREAM, uncompressedMediaType.GetAddressOf()))) {
+      return false;
+    }
+    WAVEFORMATEX* pWaveFormatEx;
+    uint32_t waveFormatLength;
+    if (FAILED(MFCreateWaveFormatExFromMFMediaType(uncompressedMediaType.Get(), &pWaveFormatEx, &waveFormatLength))) {
+      return false;
+    }
+
+    if (FAILED(xaudio->CreateSourceVoice(&sourceVoice, pWaveFormatEx))) {
+      return false;
+    }
+    CoTaskMemFree(pWaveFormatEx);
+    return true;
   }
-  criAtomExPlayer_Stop(playerList[playerId]);
+
+  virtual ~MFStreamSoundImpl() override {
+    if (sourceVoice) {
+      sourceVoice->DestroyVoice();
+    }
+  }
+  virtual bool Play(int flags) override {
+    if (!(state & State_Pausing)) {
+      Stop();
+    }
+    isEndOfStream = false;
+    state = State_Playing;
+    loop = flags & Flag_Loop;
+    return SUCCEEDED(sourceVoice->Start());
+  }
+  virtual bool Pause() override {
+    if (state & State_Playing && !(state & State_Pausing)) {
+      state |= State_Pausing;
+      return SUCCEEDED(sourceVoice->Stop());
+    }
+    return false;
+  }
+  virtual bool Seek() override {
+    return true;
+  }
+  virtual bool Stop() override {
+    if (state & State_Playing) {
+      if (!(state & State_Pausing) && FAILED(sourceVoice->Stop())) {
+        return false;
+      }
+      state = State_Stopped;
+      return SUCCEEDED(sourceVoice->FlushSourceBuffers());
+    }
+    return false;
+  }
+  virtual float SetVolume(float volume) override {
+    sourceVoice->SetVolume(volume);
+    return volume;
+  }
+  virtual float SetPitch(float pitch) override {
+    sourceVoice->SetFrequencyRatio(pitch);
+    return pitch;
+  }
+  virtual int GetState() const override {
+    XAUDIO2_VOICE_STATE s;
+    sourceVoice->GetState(&s);
+    return s.BuffersQueued ? (state | State_Prepared) : State_Stopped;
+  }
+
+  enum Result {
+    success,
+    endOfStream,
+    readError,
+  };
+
+  Result ReadFile() {
+    size_t right = 0;
+    size_t left = 0;
+    if (bufTop >= bufBottom) {
+      right = bufBottom;
+      left = buf.size() - bufTop;
+    } else {
+      right = 0;
+      left = bufBottom - bufTop;
+    }
+    if (left + right < BUFFER_SIZE * 2) {
+      return success;
+    }
+
+    ComPtr<IMFSample> sample;
+    DWORD flags = 0;
+    if (FAILED(sourceReader->ReadSample(MF_SOURCE_READER_FIRST_AUDIO_STREAM, 0, nullptr, &flags, nullptr, sample.GetAddressOf()))) {
+      return readError;
+    }
+    if (flags & MF_SOURCE_READERF_ENDOFSTREAM) {
+      // reached to the end of stream.
+      return endOfStream;
+    }
+    ComPtr<IMFMediaBuffer> buffer;
+    if (FAILED(sample->ConvertToContiguousBuffer(buffer.GetAddressOf()))) {
+      return readError;
+    }
+    BYTE* pAudioData = nullptr;
+    DWORD audioDataLength = 0;
+    if (FAILED(buffer->Lock(&pAudioData, nullptr, &audioDataLength))) {
+      return readError;
+    }
+    if (left >= audioDataLength) {
+      std::copy(pAudioData, pAudioData + audioDataLength, &buf[bufTop]);
+      bufTop += audioDataLength;
+    } else {
+      std::copy(pAudioData, pAudioData + left, &buf[bufTop]);
+      std::copy(pAudioData + left, pAudioData + audioDataLength, &buf[0]);
+      bufTop = audioDataLength - left;
+    }
+    if (FAILED(buffer->Unlock())) {
+      return readError;
+    }
+    return success;
+  }
+
+  bool Update() {
+    if (isEndOfStream) {
+      return false;
+    }
+
+    XAUDIO2_VOICE_STATE state;
+    sourceVoice->GetState(&state);
+    if (state.BuffersQueued >= MAX_BUFFER_COUNT - 1) {
+      return true;
+    }
+
+    Result result = ReadFile();
+    if (result == readError) {
+      return false;
+    }
+    if (result == endOfStream) {
+      if (loop) {
+        PROPVARIANT value;
+        value.vt = VT_I8;
+        value.hVal.QuadPart = 0;
+        sourceReader->SetCurrentPosition(GUID_NULL, value);
+        result = ReadFile();
+        if (result == readError) {
+          return false;
+        }
+      } else {
+        isEndOfStream = true;
+      }
+    }
+
+    XAUDIO2_BUFFER buffer = {};
+    buffer.pAudioData = &buf[bufBottom];
+    const size_t availableBytes = bufTop > bufBottom ? (bufTop - bufBottom) : (bufTop + buf.size() - bufBottom);
+    if (availableBytes >= BUFFER_SIZE) {
+      buffer.Flags = 0;
+      buffer.AudioBytes = BUFFER_SIZE;
+    } else {
+      buffer.Flags = XAUDIO2_END_OF_STREAM;
+      buffer.AudioBytes = availableBytes;
+    }
+    sourceVoice->SubmitSourceBuffer(&buffer, nullptr);
+
+    currentPos += buffer.AudioBytes;
+    bufBottom += BUFFER_SIZE;
+    if (bufBottom >= buf.size()) {
+      bufBottom -= buf.size();
+    }
+    return true;
+  }
+
+  ComPtr<IMFSourceReader> sourceReader;
+
+  IXAudio2SourceVoice* sourceVoice = nullptr;
+
+  static const size_t BUFFER_SIZE = 0x10000;
+  static const int MAX_BUFFER_COUNT = 6;
+
+  int state = State_Create;
+  bool loop = false;
+  bool isEndOfStream = false;
+  std::vector<uint8_t> buf;
+  size_t bufTop = 0;
+  size_t bufBottom = 0;
+  size_t currentPos = 0;
+};
+
+/**
+* Engineの実装.
+*/
+class EngineImpl : public Engine
+{
+public:
+//	EngineImpl() : Engine(), xaudio(), masteringVoice(nullptr) {}
+//	virtual ~EngineImpl() {}
+
+  virtual bool Initialize() override {
+    ComPtr<IXAudio2> tmpAudio;
+    UINT32 flags = 0;
+#ifndef NDEBUG
+    //		flags |= XAUDIO2_DEBUG_ENGINE;
+#endif // NDEBUG
+    HRESULT hr = XAudio2Create(&tmpAudio, flags);
+    if (FAILED(hr)) {
+      return false;
+    }
+    if (1) {
+      XAUDIO2_DEBUG_CONFIGURATION debug = {};
+      debug.TraceMask = XAUDIO2_LOG_ERRORS | XAUDIO2_LOG_WARNINGS | XAUDIO2_LOG_MEMORY;
+      debug.BreakMask = XAUDIO2_LOG_ERRORS;
+      debug.LogFunctionName = TRUE;
+      tmpAudio->SetDebugConfiguration(&debug);
+    }
+    hr = tmpAudio->CreateMasteringVoice(&masteringVoice);
+    if (FAILED(hr)) {
+      return false;
+    }
+
+    // Setup for Media foundation.
+    mf = std::make_unique<MediaFoundationInitialize>();
+    if (FAILED(MFCreateAttributes(attributes.GetAddressOf(), 1))) {
+      return false;
+    }
+    if (FAILED(attributes->SetUINT32(MF_LOW_LATENCY, true))) {
+      return false;
+    }
+
+    xaudio.Swap(std::move(tmpAudio));
+    return true;
+  }
+
+	virtual void Destroy() override {
+		streamSound.reset();
+		soundList.clear();
+        mfSoundList.clear();
+		xaudio.Reset();
+	}
+
+    virtual bool Update() override {
+      soundList.remove_if(
+        [](const SoundList::value_type& p) { return (p.use_count() <= 1) && (p->GetState() & State_Stopped); }
+      );
+      mfSoundList.remove_if(
+        [](const MFSoundList::value_type& p) { return (p.use_count() <= 1) && (p->GetState() & State_Stopped); }
+      );
+      for (auto&& e : mfSoundList) {
+        e->Update();
+      }
+      if (streamSound) {
+        streamSound->Update();
+        if ((streamSound.use_count() <= 1) && (streamSound->GetState() & State_Stopped)) {
+          streamSound.reset();
+        }
+      }
+      return true;
+    }
+
+	virtual SoundPtr Prepare(const wchar_t* filename) override {
+		ScopedHandle hFile = CreateFile2(filename, GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING, nullptr);
+		if (!hFile) {
+			return nullptr;
+		}
+		WF wf;
+		std::shared_ptr<SoundImpl> sound(new SoundImpl);
+		if (!LoadWaveFile(hFile, wf, sound->seekTable, &sound->source)) {
+			return nullptr;
+		}
+		if (FAILED(xaudio->CreateSourceVoice(&sound->sourceVoice, &wf.u.ext.Format))) {
+			return nullptr;
+		}
+		soundList.push_back(sound);
+		return sound;
+	}
+
+	virtual SoundPtr PrepareStream(const wchar_t* filename) override {
+		streamSound.reset(new StreamSoundImpl(CreateFile2(filename, GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING, nullptr)));
+		if (!streamSound->handle) {
+			return nullptr;
+		}
+		WF wf;
+		if (!LoadWaveFile(streamSound->handle, wf, streamSound->seekTable, nullptr)) {
+			return nullptr;
+		}
+		if (FAILED(xaudio->CreateSourceVoice(&streamSound->sourceVoice, &wf.u.ext.Format))) {
+			return nullptr;
+		}
+		streamSound->dataOffset = wf.dataOffset;
+		streamSound->dataSize = wf.dataSize;
+		streamSound->packetSize = wf.u.ext.Format.nBlockAlign;
+		return streamSound;
+	}
+
+    virtual SoundPtr PrepareMFStream(const wchar_t* filename) override {
+      std::shared_ptr<MFStreamSoundImpl> mfs = std::make_shared<MFStreamSoundImpl>();
+      mfs->Init(xaudio, attributes.Get(), filename);
+      mfSoundList.push_back(mfs);
+      return mfs;
+    }
+
+
+	virtual void SetMasterVolume(float vol) override {
+		if (xaudio) {
+			masteringVoice->SetVolume(vol);
+		}
+	}
+
+private:
+	ComPtr<IXAudio2> xaudio;
+	IXAudio2MasteringVoice* masteringVoice;
+
+	typedef std::list<std::shared_ptr<SoundImpl>> SoundList;
+	SoundList soundList;
+	std::shared_ptr<StreamSoundImpl> streamSound;
+
+    std::unique_ptr<MediaFoundationInitialize> mf;
+    ComPtr<IMFByteStream> pMFByteStream;
+    ComPtr<IMFSourceReader> pMFSourceReader;
+    ComPtr<IMFAttributes> attributes;
+    typedef std::list<std::shared_ptr<MFStreamSoundImpl>> MFSoundList;
+    MFSoundList mfSoundList;
+};
+
+Engine& Engine::Get()
+{
+	static EngineImpl engine;
+	return engine;
 }
 
 } // namespace Audio
