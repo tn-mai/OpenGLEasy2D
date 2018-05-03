@@ -18,6 +18,13 @@ struct Rect
   glm::vec2 size; ///< 縦横の幅.
 };
 
+/// 色合成モード.
+enum BlendMode {
+  BlendMode_Multply,
+  BlendMode_Add,
+  BlendMode_Subtract,
+};
+
 /**
 * スプライトクラス.
 */
@@ -36,6 +43,8 @@ public:
   const Rect& Rectangle() const { return rect; }
   void Color(const glm::vec4& c) { color = c; }
   const glm::vec4& Color() const { return color; }
+  void ColorMode(BlendMode mode) { colorMode = mode; }
+  BlendMode ColorMode() const { return colorMode; }
 
   void Animator(const FrameAnimation::AnimatePtr& anm) { animator = anm; }
   const FrameAnimation::AnimatePtr& Animator() const { return animator; }
@@ -48,6 +57,7 @@ private:
   TexturePtr texture;
   Rect rect = { glm::vec2(0, 0), glm::vec2(1, 1) };
   glm::vec4 color = glm::vec4(1);
+  BlendMode colorMode;
 
   FrameAnimation::AnimatePtr animator;
 };

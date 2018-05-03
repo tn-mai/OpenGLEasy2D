@@ -2,6 +2,7 @@
 
 layout(location=0) in vec4 inColor;
 layout(location=1) in vec2 inTexCoord;
+layout(location=2) flat in int inBlendMode;
 
 uniform sampler2D colorSampler;
 
@@ -9,5 +10,12 @@ out vec4 fragColor;
 
 void main()
 {
-  fragColor = inColor * texture(colorSampler, inTexCoord);
+  vec4 texColor = texture(colorSampler, inTexCoord);
+  if (inBlendMode == 0) {
+    fragColor = texColor * inColor;
+  } else if (inBlendMode == 1) {
+    fragColor = texColor + inColor;
+  } else {
+    fragColor = texColor - inColor;
+  }
 }

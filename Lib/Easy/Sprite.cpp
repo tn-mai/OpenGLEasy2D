@@ -16,6 +16,7 @@ struct Vertex
   glm::vec3 position; ///< 座標
   glm::vec4 color; ///< 色
   glm::vec2 texCoord; ///< テクスチャ座標
+  glm::i32 blendMode; ///< 色合成モード.
 };
 
 namespace /* unnamed */ {
@@ -72,6 +73,21 @@ void SetVertexAttribPointerI(GLuint index, GLint size, GLsizei stride, const GLv
 }
 
 /**
+* 頂点アトリビュートを設定する(整数).
+*
+* @param index 頂点アトリビュートのインデックス.
+* @param cls   頂点データ型名.
+* @param mbr   頂点アトリビュートに設定するclsのメンバ変数名.
+*/
+#define SetVertexAttribIntPointer(index, cls, mbr) \
+  SetVertexAttribIntPointerI(index, sizeof(cls::mbr) / sizeof(float), sizeof(cls), reinterpret_cast<GLvoid*>(offsetof(cls, mbr)))
+void SetVertexAttribIntPointerI(GLuint index, GLint size, GLsizei stride, const GLvoid* pointer)
+{
+  glEnableVertexAttribArray(index);
+  glVertexAttribIPointer(index, size, GL_INT, stride, pointer);
+}
+
+/**
 * Vertex Array Objectを作成する.
 *
 * @param vbo VAOに関連付けられるVBOのID.
@@ -89,6 +105,7 @@ GLuint CreateVAO(GLuint vbo, GLuint ibo)
   SetVertexAttribPointer(0, Vertex, position);
   SetVertexAttribPointer(1, Vertex, color);
   SetVertexAttribPointer(2, Vertex, texCoord);
+  SetVertexAttribIntPointer(3, Vertex, blendMode);
   glBindVertexArray(0);
   return vao;
 }
@@ -230,18 +247,22 @@ bool SpriteRenderer::AddVertices(const Sprite& sprite)
   pVBO[0].position = transform * glm::vec4(-halfSize.x, -halfSize.y, 0, 1);
   pVBO[0].color = sprite.Color();
   pVBO[0].texCoord = rect.origin;
+  pVBO[0].blendMode = sprite.ColorMode();
 
   pVBO[1].position = transform * glm::vec4(halfSize.x, -halfSize.y, 0, 1);
   pVBO[1].color = sprite.Color();
   pVBO[1].texCoord = glm::vec2(rect.origin.x + rect.size.x, rect.origin.y);
+  pVBO[1].blendMode = sprite.ColorMode();
 
   pVBO[2].position = transform * glm::vec4(halfSize.x, halfSize.y, 0, 1);
   pVBO[2].color = sprite.Color();
   pVBO[2].texCoord = rect.origin + rect.size;
+  pVBO[2].blendMode = sprite.ColorMode();
 
   pVBO[3].position = transform * glm::vec4(-halfSize.x, halfSize.y, 0, 1);
   pVBO[3].color = sprite.Color();
   pVBO[3].texCoord = glm::vec2(rect.origin.x, rect.origin.y + rect.size.y);
+  pVBO[3].blendMode = sprite.ColorMode();
 
   pVBO += 4;
   vboSize += 4;
