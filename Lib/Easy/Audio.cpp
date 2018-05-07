@@ -641,12 +641,14 @@ public:
       soundList.remove_if(
         [](const SoundList::value_type& p) { return (p.use_count() <= 1) && (p->GetState() & State_Stopped); }
       );
-      mfSoundList.remove_if(
-        [](const MFSoundList::value_type& p) { return (p.use_count() <= 1) && (p->GetState() & State_Stopped); }
-      );
+
       for (auto&& e : mfSoundList) {
         e->Update();
       }
+      mfSoundList.remove_if(
+        [](const MFSoundList::value_type& p) { return (p.use_count() <= 1) && (p->GetState() & State_Stopped); }
+      );
+
       if (streamSound) {
         streamSound->Update();
         if ((streamSound.use_count() <= 1) && (streamSound->GetState() & State_Stopped)) {
