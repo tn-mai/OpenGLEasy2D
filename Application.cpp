@@ -31,7 +31,7 @@ void application()
     set_image(1, 0, 400, "janken.png");
   }
   move_image(1, 0, 100, 1, 1.0f);
-  play_bgm("Res/7050.mp3");
+  play_bgm("073.mp3");
   wait(1);
 
   set_text(-360, 0, "手を選んでください");
@@ -66,6 +66,7 @@ void application()
   scale_image(3, 0, 0, 0, 0);
   scale_image(3, 1, 1, 5, 0.25f);
 
+  play_sound("kotsudumi1.mp3");
   wait(2); // 2秒間待つ
 
   // 数値の比較は二重のイコール記号「==」で行う.
@@ -75,14 +76,17 @@ void application()
   // 勝ったり負けたりした場合は「あいこ」じゃないのでaiko_flagを「偽」にしておく.
   // 勝ってもいないし負けてもいない場合は「あいこ」なのでaiko_flagを「真」にしておく.
   if ((player_hand == 0 && cpu_hand == 1) || (player_hand == 1 && cpu_hand == 2) || (player_hand == 2 && cpu_hand == 0)) {
+    play_sound("correct4.mp3");
     set_image(4, 0, -150, "janken_kachi.png");
     player_win_count += 1; // プレイヤーの勝利数を1増やす.
     aiko_flag = false;
   } else if ((player_hand == 0 && cpu_hand == 2) || (player_hand == 1 && cpu_hand == 0) || (player_hand == 2 && cpu_hand == 1)) {
+    play_sound("incorrect1.mp3");
     set_image(4, 0, -150, "janken_make.png");
     cpu_win_count += 1; // CPUの勝利数を1増やす.
     aiko_flag = false;
   } else {
+    play_sound("stupid2.mp3");
     aiko_flag = true;
   }
 
@@ -97,6 +101,7 @@ void application()
     wait(3); // 3秒間待つ.
     set_text(-360, -40, "勝負を続けますか？");
     const int yes_or_no = select(-360, -80, 2, "続ける", "やめる");
+    play_sound("switch1.mp3");
     // "やめる"が選ばれたらアプリケーションを終了する.
     if (yes_or_no == 1) {
       fade_out(0, 0, 0, 1);

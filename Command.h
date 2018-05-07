@@ -170,6 +170,18 @@ int random(int min, int max);
 */
 void quit();
 
-void play_bgm(const char*);
+/**
+* 音声を再生する.
+*
+* @param filename 再生する音声ファイル.
+*/
+void play_sound(const char* filename);
+
+/**
+* 背景音楽を再生する.
+*
+* @param filename 再生する音声ファイル.
+*/
+void play_bgm(const char* filename);
 
 #endif // COMMAND_H_INCLUDED

@@ -418,10 +418,29 @@ void quit()
   Texture::Finalize();
 }
 
-void play_bgm(const char* filename) {
-  if (bgmFilename != filename || !(bgm->GetState() & Audio::State_Playing)) {
+void play_sound(const char* filename)
+{
+  std::string str;
+  str.reserve(1024);
+  str += "Res/";
+  str += filename;
+  const std::wstring ws = sjis_to_utf16(str.c_str());
+  Audio::SoundPtr p = Audio::Engine::Get().PrepareMFStream(ws.c_str());
+  p->Play(Audio::Flag_None);
+}
+
+void play_bgm(const char* filename)
+{
+  if (bgmFilename != filename || !bgm || !(bgm->GetState() & Audio::State_Playing)) {
+    if (bgm) {
+      bgm->Stop();
+    }
     bgmFilename = filename;
-    const std::wstring ws = sjis_to_utf16(filename);
+    std::string str;
+    str.reserve(1024);
+    str += "Res/";
+    str += filename;
+    const std::wstring ws = sjis_to_utf16(str.c_str());
     bgm = Audio::Engine::Get().PrepareMFStream(ws.c_str());
     bgm->Play(Audio::Flag_Loop);
   }
