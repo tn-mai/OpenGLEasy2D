@@ -64,7 +64,7 @@ void application()
   case 2: set_image(3, 200, 100, "janken_pa.png"); break;
   }
   scale_image(3, 0, 0, 0, 0);
-  scale_image(3, 1, 1, 5, 0.25f);
+  scale_image(3, 1, 1, 4, 0.25f);
 
   play_sound("kotsudumi1.mp3");
   wait(2); // 2•bŠÔ‘Ò‚Â
