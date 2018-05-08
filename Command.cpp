@@ -252,7 +252,7 @@ void initialize()
   randomEngine.seed(std::random_device()());
 }
 
-void set_text(int x, int y, const char* format, ...)
+void set_text(float x, float y, const char* format, ...)
 {
   va_list ap;
   va_start(ap, format);
@@ -356,7 +356,7 @@ void wait(float seconds)
   });
 }
 
-int select(int x, int y, int count, const char* a, const char* b, ...)
+int select(float x, float y, int count, const char* a, const char* b, ...)
 {
   std::vector<std::wstring> selectionList;
 

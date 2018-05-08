@@ -9,7 +9,7 @@
 * @param  format •¶š‚Ì‘®w’è(printfŠÖ”‚Ì‚à‚Ì‚Æ“¯‚¶).
 * @param  ...    ’Ç‰Á‚Ìˆø”(printfŠÖ”‚Ì‚à‚Ì‚Æ“¯‚¶).
 */
-void set_text(int x, int y, const char* format, ...);
+void set_text(float x, float y, const char* format, ...);
 
 /**
 * ‚·‚×‚Ä‚Ì•¶š‚ğÁ‚·.
@@ -153,7 +153,7 @@ void wait(float seconds);
 * @return ‘I‘ğ‚³‚ê‚½€–Ú‚Ì”Ô†.
 *         ‚Ğ‚Æ‚Â‚ß‚Ì‘I‘ğˆ‚ğ0”Ô‚Æ‚·‚é.
 */
-int select(int x, int y, int count, const char* a, const char* b, ...);
+int select(float x, float y, int count, const char* a, const char* b, ...);
 
 /**
 * —”‚ğ“¾‚é.
