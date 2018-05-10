@@ -315,6 +315,7 @@ void color_blend_image(int no, float red, float green, float blue, float alpha, 
   auto& e = spriteBuffer[no];
   e.ColorMode(static_cast<BlendMode>(glm::clamp(mode, 0, 2)));
   e.color.init(e.Color(), glm::vec4(red, green, blue, alpha), easing, seconds);
+  e.Color(e.color.update(0));
 }
 
 void reset_image(int no)
