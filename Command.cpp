@@ -6,6 +6,7 @@
 #include "Sprite.h"
 #include "Font.h"
 #include "Audio.h"
+#include <glm/gtc/constants.hpp>
 #include <vector>
 #include <string>
 #include <memory>
@@ -306,7 +307,7 @@ void scale_image(int no, float x, float y, int easing, float seconds)
 void rotate_image(int no, float degree, int easing, float seconds)
 {
   auto& e = spriteBuffer[no];
-  e.rotate.init(e.Rotation(), degree, easing, seconds);
+  e.rotate.init(e.Rotation(), degree * (glm::pi<float>() / 180.0f), easing, seconds);
   e.Rotation(e.rotate.update(0));
 }
 
