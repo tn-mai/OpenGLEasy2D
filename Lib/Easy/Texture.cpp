@@ -90,9 +90,9 @@ WICPixelFormatGUID GetGLCompatibleWICFormat(const WICPixelFormatGUID& wicFormat)
     { GUID_WICPixelFormat32bppGrayFixedPoint, GUID_WICPixelFormat32bppGrayFloat },
     { GUID_WICPixelFormat16bppBGR555, GUID_WICPixelFormat16bppBGRA5551 },
     { GUID_WICPixelFormat32bppBGR101010, GUID_WICPixelFormat32bppRGBA1010102 },
-    { GUID_WICPixelFormat24bppBGR, GUID_WICPixelFormat32bppRGBA },
+    { GUID_WICPixelFormat24bppBGR, GUID_WICPixelFormat32bppBGRA },
     { GUID_WICPixelFormat24bppRGB, GUID_WICPixelFormat32bppRGBA },
-    { GUID_WICPixelFormat32bppPBGRA, GUID_WICPixelFormat32bppRGBA },
+    { GUID_WICPixelFormat32bppPBGRA, GUID_WICPixelFormat32bppBGRA },
     { GUID_WICPixelFormat32bppPRGBA, GUID_WICPixelFormat32bppRGBA },
     { GUID_WICPixelFormat48bppRGB, GUID_WICPixelFormat64bppRGBA },
     { GUID_WICPixelFormat48bppBGR, GUID_WICPixelFormat64bppRGBA },
@@ -193,21 +193,27 @@ TexturePtr LoadFromFile(const char* filename)
     }
     imageConverted = true;
   }
-  const int bytesPerRow = width * glFormat.byteSize;
-  const int imageSize = bytesPerRow * height;
-  std::vector<uint8_t> imageData;
-  imageData.resize(imageSize);
+
+  ComPtr<IWICBitmap> bitmap;
   if (imageConverted) {
-    if (FAILED(converter->CopyPixels(nullptr, bytesPerRow, imageSize, imageData.data()))) {
+    if (FAILED(imagingFactory->CreateBitmapFromSource(converter.Get(), WICBitmapNoCache, bitmap.GetAddressOf()))) {
       return {};
     }
   } else {
-    if (FAILED(flipRotator->CopyPixels(nullptr, bytesPerRow, imageSize, imageData.data()))) {
+    if (FAILED(imagingFactory->CreateBitmapFromSource(flipRotator.Get(), WICBitmapNoCache, bitmap.GetAddressOf()))) {
       return {};
     }
   }
-
-  return Texture::Create(width, height, glFormat.internalformat, glFormat.format, glFormat.type, imageData.data());
+  ComPtr<IWICBitmapLock> lock;
+  if (FAILED(bitmap->Lock(nullptr, WICBitmapLockRead, lock.GetAddressOf()))) {
+    return {};
+  }
+  UINT bmpBufferSize;
+  WICInProcPointer pData;
+  if (FAILED(lock->GetDataPointer(&bmpBufferSize, &pData))) {
+    return {};
+  }
+  return Texture::Create(width, height, glFormat.internalformat, glFormat.format, glFormat.type, pData);
 }
 
 } // namespace dxgi
