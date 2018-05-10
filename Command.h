@@ -202,4 +202,29 @@ void play_sound(const char* filename);
 */
 void play_bgm(const char* filename);
 
+/**
+* 背景音楽を停止する.
+*/
+void stop_bgm();
+
+/**
+* 音声の音量を設定する.
+*
+* @param volume 音量
+*               0.0 無音
+*               1.0 音声データそのままの音量.
+*               2.0 音声データの2倍の音量.
+*/
+void set_sound_volume(float volume);
+
+/**
+* 背景音楽の音量を設定する.
+*
+* @param volume 音量
+*               0.0 無音
+*               1.0 音声データそのままの音量.
+*               2.0 音声データの2倍の音量.
+*/
+void set_bgm_volume(float volume);
+
 #endif // COMMAND_H_INCLUDED

@@ -155,6 +155,8 @@ std::mt19937 randomEngine;
 
 std::string bgmFilename;
 Audio::SoundPtr bgm;
+float seVolume = 1.0f;
+float bgmVolume = 1.0f;
 
 } // unnamed namespace
 
@@ -427,6 +429,7 @@ void play_sound(const char* filename)
   const std::wstring ws = sjis_to_utf16(str.c_str());
   Audio::SoundPtr p = Audio::Engine::Get().PrepareMFStream(ws.c_str());
   p->Play(Audio::Flag_None);
+  p->SetVolume(seVolume);
 }
 
 void play_bgm(const char* filename)
@@ -443,5 +446,28 @@ void play_bgm(const char* filename)
     const std::wstring ws = sjis_to_utf16(str.c_str());
     bgm = Audio::Engine::Get().PrepareMFStream(ws.c_str());
     bgm->Play(Audio::Flag_Loop);
+    bgm->SetVolume(bgmVolume);
+  }
+}
+
+void stop_bgm()
+{
+  bgmFilename.clear();
+  if (bgm) {
+    bgm->Stop();
+    bgm.reset();
+  }
+}
+
+void set_sound_volume(float volume)
+{
+  seVolume = volume;
+}
+
+void set_bgm_volume(float volume)
+{
+  bgmVolume = volume;
+  if (bgm) {
+    bgm->SetVolume(volume);
   }
 }
