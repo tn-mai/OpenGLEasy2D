@@ -207,9 +207,9 @@ void main_loop(T func)
 
     const glm::vec2 windowSize(window.Width(), window.Height());
 
+    colorFilter.Scale(windowSize * invColorFilterSize);
     colorFilter.UpdateTransform();
     colorFilter.UpdateRecursive(deltaTime);
-    colorFilter.Scale(windowSize * invColorFilterSize);
     colorFilterRenderer.Update(colorFilter);
 
     glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
