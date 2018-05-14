@@ -64,8 +64,8 @@ void move_image(int no, float x, float y, int easing, float seconds);
 * 画像を拡大・縮小する.
 *
 * @param  no      画像の管理番号.
-* @param  x       拡大・縮小後のX方向の大きさ.
-* @param  y       拡大・縮小後のY方向の大きさ..
+* @param  x       拡大・縮小後のX方向の大きさ. マイナス値を設定すると左右が反転する.
+* @param  y       拡大・縮小後のY方向の大きさ. マイナス値を設定すると上下が反転する.
 * @param  easing  補間方法:
 *                   0 等速で拡大・縮小.
 *                   1 加速しながら拡大・縮小.
@@ -81,7 +81,7 @@ void scale_image(int no, float x, float y, int easing, float seconds);
 * 画像を回転する.
 *
 * @param  no      画像の管理番号.
-* @param  degree  回転させる角度(度数法).
+* @param  degree  回転させる角度(度数法). マイナス値を設定すると回転方向が逆になる.
 * @param  easing  補間方法:
 *                   0 等速で回転.
 *                   1 加速しながら回転.
