@@ -30,19 +30,6 @@ void application()
     /*
     * この下にタイトル画面のプログラムを追加します.
     */
-    set_image(1, -800, 80, "janken_title.png");
-    move_image(1, 0, 80, 5, 2);
-    scale_image(1, 0, 0, 0, 0);
-    scale_image(1, 1, 1, 0, 2);
-    rotate_image(1, 360, 0, 2);
-    color_blend_image(1, 1, 1, 1, 0, 0, 0, 0);
-    color_blend_image(1, 1, 1, 1, 1, 0, 0, 2);
-    set_text(-192, -100, "何かキーを押してください");
-    wait_any_key();
-    fade_out(0, 0, 0, 1);
-    reset_all_text();
-    reset_image(1);
-    fade_in(1);
   }
 
   set_text(-360, 260, "あなた(%d勝)", player_win_count);
