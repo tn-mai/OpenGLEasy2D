@@ -19,6 +19,24 @@ void ErrorCallback(int error, const char* desc)
 }
 
 /**
+* GLFWからのキー操作報告を処理する.
+*/
+void Window::KeyCallback(GLFWwindow* pWindow, int key, int scancode, int action, int mods)
+{
+  if (key < 0 || key >= GLFW_KEY_LAST) {
+    return;
+  }
+  Window& window = *static_cast<Window*>(glfwGetWindowUserPointer(pWindow));
+  if (action == GLFW_RELEASE) {
+    window.keyPressed[key] = false;
+    --window.numOfKeyPressed;
+  } else if (action == GLFW_PRESS) {
+    window.keyPressed[key] = true;
+    ++window.numOfKeyPressed;
+  }
+}
+
+/**
 * シングルトンインスタンスを取得する.
 *
 * @return Windowのシングルトンインスタンス.
@@ -78,6 +96,11 @@ bool Window::Init(int w, int h, const char* title)
 
   width = w;
   height = h;
+
+  numOfKeyPressed = 0;
+  std::fill_n(keyPressed, GLFW_KEY_LAST, false);
+  glfwSetWindowUserPointer(window, this);
+  glfwSetKeyCallback(window, KeyCallback);
 
   const GLubyte* renderer = glGetString(GL_RENDERER);
   std::cout << "Renderer: " << renderer << std::endl;

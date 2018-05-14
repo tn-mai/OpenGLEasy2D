@@ -20,6 +20,7 @@ public:
   bool ShouldClose() const;
   void SwapBuffers() const;
   const GamePad& GetGamePad() const;
+  int NumOfKeyPressed() const { return numOfKeyPressed; }
   void Update();
   void ResetDeltaTime();
   float DeltaTime() const { return deltaTime; }
@@ -33,6 +34,7 @@ private:
   Window& operator=(const Window&) = delete;
 
   void UpdateGamePad();
+  static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
   bool isGLFWInitialized = false;
   bool isInitialized = false;
@@ -40,6 +42,8 @@ private:
   int width;
   int height;
   GamePad gamepad;
+  int numOfKeyPressed;
+  bool keyPressed[GLFW_KEY_LAST];
 
   double prevTime = 0;
   float deltaTime = 0;
