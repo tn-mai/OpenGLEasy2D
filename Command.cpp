@@ -357,6 +357,22 @@ void wait(float seconds)
   });
 }
 
+void wait_any_key()
+{
+  fontRenderer.Color(glm::vec4(1));
+  fontRenderer.MapBuffer();
+  for (const auto& e : textList) {
+    fontRenderer.AddString(e.pos, e.text.c_str());
+  }
+  fontRenderer.UnmapBuffer();
+
+  main_loop([] {
+    GLFWEW::Window& window = GLFWEW::Window::Instance();
+    const GamePad gamepad = window.GetGamePad();
+    return gamepad.buttons || (window.NumOfKeyPressed() > 0);
+  });
+}
+
 int select(float x, float y, int count, const char* a, const char* b, ...)
 {
   std::vector<std::wstring> selectionList;

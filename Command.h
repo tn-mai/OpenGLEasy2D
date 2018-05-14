@@ -155,6 +155,11 @@ void fade_in(float seconds);
 void wait(float seconds);
 
 /**
+* 何かキーが入力されるまで待つ.
+*/
+void wait_any_key();
+
+/**
 * 選択肢を表示して、選択された結果を得る.
 *
 * @param  x     表示開始位置の左端座標.
