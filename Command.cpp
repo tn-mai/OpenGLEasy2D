@@ -55,7 +55,7 @@ struct action
     switch (easing) {
     default:
     case linear: break;
-    case ease_in: ratio *= ratio;
+    case ease_in: ratio *= ratio; break;
     case ease_out: ratio = 2.0f * ratio - ratio * ratio; break;
     case ease_in_out:
       ratio *= 2.0f;
