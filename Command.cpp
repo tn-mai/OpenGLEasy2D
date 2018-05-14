@@ -141,9 +141,6 @@ SpriteRenderer spriteRenderer;
 color_filter colorFilter;
 SpriteRenderer colorFilterRenderer;
 
-glm::vec2 textOrigin;
-int maxTextLines;
-
 struct text_info
 {
   glm::vec2 pos;
