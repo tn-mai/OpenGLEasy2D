@@ -14,8 +14,10 @@ void main()
   if (inBlendMode == 0) {
     fragColor = texColor * inColor;
   } else if (inBlendMode == 1) {
-    fragColor = texColor + inColor;
+    fragColor.rgb = texColor.rgb + inColor.rgb;
+	fragColor.a = texColor.a * inColor.a;
   } else {
-    fragColor = texColor - inColor;
+    fragColor.rgb = texColor.rgb - inColor.rgb;
+	fragColor.a = texColor.a * inColor.a;
   }
 }
