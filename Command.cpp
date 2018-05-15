@@ -13,6 +13,7 @@
 #include <random>
 #include <iostream>
 #include <stdarg.h>
+#include <algorithm>
 
 bool hasQuitRequest = false;
 
