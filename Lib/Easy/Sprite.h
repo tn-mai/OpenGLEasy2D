@@ -20,7 +20,7 @@ struct Rect
 
 /// F‡¬ƒ‚[ƒh.
 enum BlendMode {
-  BlendMode_Multply,
+  BlendMode_Multiply,
   BlendMode_Add,
   BlendMode_Subtract,
 };
