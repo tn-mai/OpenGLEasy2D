@@ -284,6 +284,8 @@ void set_image(int no, float x, float y, const char* filename)
     spriteBuffer[no].Scale(glm::vec2(1, 1));
     spriteBuffer[no].Rotation(0);
     spriteBuffer[no].Color(glm::vec4(1, 1, 1, 1));
+    spriteBuffer[no].ColorMode(BlendMode_Multiply);
+
     spriteBuffer[no].init_action();
   }
 }
