@@ -30,6 +30,150 @@ void application()
     /*
     * この下にタイトル画面のプログラムを追加します.
     */
+#if 0
+    color_blend_image(0, 0, 0, 0, 1, 0, 0, 0);
+    set_image(1, 0, 0, "DeathCrimson_Monster.jpg");
+    color_blend_image(1, 1, 1, 1, 0, 0, 0, 0);
+    color_blend_image(1, 1, 1, 1, 1, 0, 0, 2);
+    wait(4);
+    reset_image(1);
+    set_text(-200, -200, "それは10年前のことであった...");
+    wait(4);
+    reset_all_text();
+    set_text(-200, 20, "「ジャン=ケン」を取り返せ...");
+    wait(2);
+    reset_all_text();
+    set_image(1, 0, 0, "DeathCrimson_EchizenWireFrame.jpg");
+    wait(1);
+    reset_image(1);
+    set_text(-230, 20, "「ジャン=ケン」は奴が持っている");
+    wait(2);
+    reset_all_text();
+    set_image(1, 0, 0, "DeathCrimson_EchizenWireFrame.jpg");
+    wait(1);
+    reset_image(1);
+    set_text(-140, 20, "そいつの名前は...");
+    wait(2);
+    reset_all_text();
+    set_text(-160, 200, "Full");
+    wait(0.5);
+    set_text(-100, 200, "Name");
+    wait(0.5);
+    set_text(0, 200, "越前");
+    wait(0.5);
+    set_text(100, 200, "康介");
+    wait(0.5);
+    set_text(-160, 100, "Code");
+    wait(0.5);
+    set_text(-100, 100, "Name");
+    wait(0.5);
+    set_text(0, 100, "コンバット");
+    wait(0.5);
+    set_text(150, 100, "越前");
+    wait(0.5);
+    set_text(-100, 0, "Age");
+    wait(0.5);
+    set_text(0, 0, "29");
+    wait(0.5);
+    set_text(-100, -100, "Size");
+    wait(0.5);
+    set_text(0, -100, "181cm");
+    wait(0.5);
+    set_text(100, -100, "70kg");
+    wait(2);
+    reset_all_text();
+    set_image(1, 0, 0, "DeathCrimson_Echizen.jpg");
+    wait(2);
+
+    set_image(1, 0, 0, "DeathCrimson_Logo.jpg");
+    move_image(1, -250, -250, 0, 1);
+    rotate_image(1, 200, 0, 0);
+    scale_image(1, 0.5, 0.5, 0, 0);
+    scale_image(1, 1, 1, 0, 6);
+    wait(1);
+    move_image(1, 250, 250, 0, 1);
+    rotate_image(1, 20, 0, 1);
+    wait(1);
+    move_image(1, -300, 0, 0, 1);
+    wait(1);
+    move_image(1, 300, -100, 0, 1);
+    rotate_image(1, -360, 0, 3);
+    wait(1);
+    move_image(1, -300, 100, 0, 1);
+    wait(1);
+    move_image(1, 300, -50, 0, 1);
+    wait(1);
+    move_image(1, 100, 0, 0, 0.5);
+    wait(0.5);
+    move_image(1, 0, 50, 0, 0);
+    wait(2);
+    reset_image(1);
+
+    set_text(-300, 200, "ダニー！グレッグ！生きてるか？");
+    wait(2);
+    set_text(-60, -100, "ああ、なんとかな！");
+    wait(3);
+    reset_all_text();
+    set_text(-300, 200, "上からくるぞ！気をつけろよ！");
+    wait(2);
+    set_text(-60, -100, "こっちだ、越前！");
+    wait(3);
+    reset_all_text();
+    set_text(-300, 200, "なんだこの階段は！？");
+    wait(2);
+    set_text(-60, -100, "とにかく、入ってみようぜ...");
+    wait(3);
+    reset_all_text();
+    set_image(1, 0, 0, "DeathCrimson_RedDoor.jpg");
+    scale_image(1, 1.25, 1.25, 0, 4.5);
+    color_blend_image(1, 1, 1, 1, 0, 0, 0, 0);
+    color_blend_image(1, 1, 1, 1, 1, 0, 0, 2);
+    wait(4);
+    set_text(-300, -200, "せっかくだから、俺はこの赤の扉を選ぶぜ！");
+    set_image(2, 0, 0, "DeathCrimson_RedDoorOpen.jpg");
+    scale_image(2, 1.125, 1.125, 0, 0);
+    color_blend_image(2, 1, 1, 1, 0, 0, 0, 0);
+    color_blend_image(2, 1, 1, 1, 1, 0, 0, 4);
+    wait(6);
+
+    reset_image(1);
+    reset_image(2);
+    reset_all_text();
+    set_text(-200, 20, "こうして越前は");
+    set_text(-200, -20, "「ジャン=ケン」を手に入れた");
+    wait(3);
+
+    reset_all_text();
+    set_text(-200, 40, "しかし今、");
+    set_text(-200, 0, "デスビスノスの放った");
+    set_text(-200, -40, "モンスターが");
+    wait(3);
+
+    reset_all_text();
+    set_text(-200, 0, "越前に襲いかかる...");
+    wait(4);
+
+    reset_all_text();
+    set_image(1, 0, 0, "DeathCrimson_Logo.jpg");
+    color_blend_image(1, 1, 1, 1, 0, 0, 0, 0);
+    color_blend_image(1, 1, 1, 1, 1, 0, 0, 1);
+    wait(1);
+#else
+    set_image(1, 0, 500, "janken_title.png");
+    color_blend_image(1, 1, 1, 1, 0, 0, 0, 0);
+    color_blend_image(1, 1, 1, 1, 1, 0, 0, 0.5);
+    scale_image(1, 0.5, 2.0, 0, 0);
+    scale_image(1, 1, 1, 5, 2);
+    move_image(1, 0, 50, 5, 2);
+#endif
+    set_text(-100, -100, "Press Any Key");
+    wait_any_key();
+
+    fade_out(0, 0, 0, 1);
+    reset_all_text();
+    reset_image(1);
+    color_blend_image(0, 1, 1, 1, 1, 0, 0, 0);
+    fade_in(1);
   }
 
   set_text(-360, 260, "あなた(%d勝)", player_win_count);
