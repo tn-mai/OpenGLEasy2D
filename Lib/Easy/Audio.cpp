@@ -197,6 +197,9 @@ public:
 		}
 	}
 	virtual bool Play(int flags) override {
+		if (!sourceVoice) {
+			return false;
+		}
 		if (!(state & State_Pausing)) {
 			Stop();
 			XAUDIO2_BUFFER buffer = {};
@@ -219,17 +222,17 @@ public:
 		return SUCCEEDED(sourceVoice->Start());
 	}
 	virtual bool Pause() override {
-		if (state & State_Playing) {
+		if (sourceVoice && (state & State_Playing)) {
 			state |= State_Pausing;
 			return SUCCEEDED(sourceVoice->Stop());
 		}
 		return false;
 	}
 	virtual bool Seek() override {
-		return true;
+		return sourceVoice;
 	}
 	virtual bool Stop() override {
-		if (state & State_Playing) {
+		if (sourceVoice && (state & State_Playing)) {
 			if (!(state & State_Pausing) && FAILED(sourceVoice->Stop())) {
 				return false;
 			}
@@ -239,14 +242,21 @@ public:
 		return false;
 	}
 	virtual float SetVolume(float volume) override {
-		sourceVoice->SetVolume(volume);
+		if (sourceVoice) {
+			sourceVoice->SetVolume(volume);
+		}
 		return volume;
 	}
 	virtual float SetPitch(float pitch) override {
-		sourceVoice->SetFrequencyRatio(pitch);
+		if (sourceVoice) {
+			sourceVoice->SetFrequencyRatio(pitch);
+		}
 		return pitch;
 	}
 	virtual int GetState() const override {
+		if (!sourceVoice) {
+			return State_Failed;
+		}
 		XAUDIO2_VOICE_STATE s;
 		sourceVoice->GetState(&s);
 		return s.BuffersQueued ? state : (State_Stopped | State_Prepared);
@@ -276,6 +286,9 @@ public:
 		}
 	}
 	virtual bool Play(int flags) override {
+		if (!sourceVoice) {
+			return false;
+		}
 		if (!(state & State_Pausing)) {
 			Stop();
 		}
@@ -284,17 +297,17 @@ public:
 		return SUCCEEDED(sourceVoice->Start());
 	}
 	virtual bool Pause() override {
-		if (state & State_Playing && !(state & State_Pausing)) {
+		if (sourceVoice && (state & State_Playing) && !(state & State_Pausing)) {
 			state |= State_Pausing;
 			return SUCCEEDED(sourceVoice->Stop());
 		}
 		return false;
 	}
 	virtual bool Seek() override {
-		return true;
+		return sourceVoice;
 	}
 	virtual bool Stop() override {
-		if (state & State_Playing) {
+		if (sourceVoice && (state & State_Playing)) {
 			if (!(state & State_Pausing) && FAILED(sourceVoice->Stop())) {
 				return false;
 			}
@@ -304,20 +317,30 @@ public:
 		return false;
 	}
 	virtual float SetVolume(float volume) override {
-		sourceVoice->SetVolume(volume);
+		if (sourceVoice) {
+			sourceVoice->SetVolume(volume);
+		}
 		return volume;
 	}
 	virtual float SetPitch(float pitch) override {
-		sourceVoice->SetFrequencyRatio(pitch);
+		if (sourceVoice) {
+			sourceVoice->SetFrequencyRatio(pitch);
+		}
 		return pitch;
 	}
 	virtual int GetState() const override {
+		if (!sourceVoice) {
+			return State_Failed;
+		}
 		XAUDIO2_VOICE_STATE s;
 		sourceVoice->GetState(&s);
 		return s.BuffersQueued ? (state | State_Prepared) : State_Stopped;
 	}
 
 	bool Update() {
+		if (!sourceVoice) {
+			return false;
+		}
 		const DWORD cbValid = std::min(BUFFER_SIZE, dataSize - currentPos);
 		if (cbValid == 0) {
 			return false;
@@ -445,6 +468,9 @@ public:
     }
   }
   virtual bool Play(int flags) override {
+    if (!sourceVoice) {
+      return false;
+    }
     if (!(state & State_Pausing)) {
       Stop();
     }
@@ -454,17 +480,17 @@ public:
     return SUCCEEDED(sourceVoice->Start());
   }
   virtual bool Pause() override {
-    if (state & State_Playing && !(state & State_Pausing)) {
+    if (sourceVoice && (state & State_Playing) && !(state & State_Pausing)) {
       state |= State_Pausing;
       return SUCCEEDED(sourceVoice->Stop());
     }
     return false;
   }
   virtual bool Seek() override {
-    return true;
+    return sourceVoice;
   }
   virtual bool Stop() override {
-    if (state & State_Playing) {
+    if (sourceVoice && (state & State_Playing)) {
       if (!(state & State_Pausing) && FAILED(sourceVoice->Stop())) {
         return false;
       }
@@ -474,14 +500,21 @@ public:
     return false;
   }
   virtual float SetVolume(float volume) override {
-    sourceVoice->SetVolume(volume);
+    if (sourceVoice) {
+      sourceVoice->SetVolume(volume);
+    }
     return volume;
   }
   virtual float SetPitch(float pitch) override {
-    sourceVoice->SetFrequencyRatio(pitch);
+    if (sourceVoice) {
+      sourceVoice->SetFrequencyRatio(pitch);
+    }
     return pitch;
   }
   virtual int GetState() const override {
+    if (!sourceVoice) {
+      return State_Failed;
+    }
     XAUDIO2_VOICE_STATE s;
     sourceVoice->GetState(&s);
     return s.BuffersQueued ? (state | State_Prepared) : State_Stopped;
@@ -525,7 +558,9 @@ public:
     if (isEndOfStream) {
       return false;
     }
-
+    if (!sourceVoice) {
+      return false;
+    }
     XAUDIO2_VOICE_STATE state;
     sourceVoice->GetState(&state);
     if (state.BuffersQueued >= MAX_BUFFER_COUNT - 1) {
