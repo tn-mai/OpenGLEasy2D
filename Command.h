@@ -5,7 +5,7 @@
 * 文字を表示する.
 *
 * @param  x      表示開始位置の左端座標.
-* @param  y      表示開始位置の上端座標.
+* @param  y      表示開始位置の下端座標.
 * @param  format 文字の書式指定(printf関数のものと同じ).
 * @param  ...    追加の引数(printf関数のものと同じ).
 *
@@ -20,11 +20,28 @@ void set_text(float x, float y, const char* format, ...);
 void reset_all_text();
 
 /**
+* 指定した範囲内の文字を消す.
+*
+* @param  x      消去範囲の左端座標.
+* @param  y      消去範囲の下端座標.
+* @param  width  消去範囲の横幅.
+* @param  height 消去範囲の縦幅.
+*
+* 範囲内かどうかの判定には、set_text関数に設定した座標が使われる.
+* また、文字列の一部が範囲外にあったとしても、set_textで設定した座標が範囲内にあるなら全て消去される.
+*
+* 例えばset_textを使って、左端座標に右端まで届くような長い文字列を表示したとする.
+* 消去範囲を中央から右端までとした場合、この文字列は1文字も消えない.
+* 消去範囲を左端から中央までとした場合、この文字列はすべて消える.
+*/
+void reset_text_area(float x, float y, float width, float height);
+
+/**
 * 画像を配置する.
 *
 * @param  no       画像の管理番号.
-* @param  x        表示位置(X座標).
-* @param  y        表示位置(Y座標).
+* @param  x        表示位置のX座標.
+* @param  y        表示位置のY座標.
 * @param  filename 画像ファイルの名前.
 *
 * このプログラムでは、配置した画像ごとに管理番号を付ける.
@@ -177,6 +194,37 @@ void wait_any_key();
 * 選択肢はひとつずつ改行されて下に並ぶので、選択肢を増やす際はウィンドウをはみ出さないように注意すること.
 */
 int select(float x, float y, int count, const char* a, const char* b, ...);
+
+/**
+* 指定した範囲の数値から、選択された値を得る.
+*
+* @param  x     表示開始位置の左端座標.
+* @param  y     表示開始位置の上端座標.
+* @param  min   選択範囲の最小値.
+* @param  max   選択範囲の最大値.
+*
+* @return min以上max未満の選択された値.
+*
+* 表示開始位置はウィンドウの中心を原点とし、左右がX軸(右がプラス方向)、上下がY軸(上がプラス方向)の座標系で指定する.
+* ウィンドウの大きさは横800ドット、縦600ドットである.
+* 値は上下キーで選択し、決定キー(AボタンorEnterキー)で確定する.
+* LまたはRキー(キーボードの場合左Ctrlキーまたは左Shiftキー)を押しながら上下キーを押すと10刻みで選択できる.
+*/
+int select_range(float x, float y, int min, int max);
+
+/**
+* 文字選択パネルを表示し、選択された文字列を得る.
+*
+* @param  x      表示開始位置の左端座標.
+* @param  y      表示開始位置の上端座標.
+* @param  max    選択できる文字の数.
+* @param  buffer 選択肢た文字を格納するバッファ.
+*                格納される文字はSJISの全角文字.
+*                全角文字の1文字は2バイト、また最後の文字のあとに終端記号(1バイト)が格納される.
+*                このため、バッファの大きさは少なくとも(max * 2 + 1)バイト必要.
+*
+*/
+void select_string(float x, float y, int max, char* buffer);
 
 /**
 * 乱数を得る.

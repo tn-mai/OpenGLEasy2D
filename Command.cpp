@@ -171,6 +171,17 @@ std::wstring sjis_to_utf16(const char* p)
 }
 
 /**
+* utf16ï∂éöóÒÇ©ÇÁsjisï∂éöóÒÇìæÇÈ.
+*/
+std::string utf16_to_sjis(const std::wstring& p)
+{
+  std::string tmp;
+  tmp.resize(p.size() * 2);
+  wcstombs(&tmp[0], p.c_str(), tmp.size());
+  return tmp;
+}
+
+/**
 * ÉXÉNÉäÅ[Éìç¿ïWÇ…ëŒâûÇ∑ÇÈÉNÉäÉbÉvç¿ïWÇìæÇÈ.
 */
 glm::vec2 screen_coord_to_clip_coord(glm::vec2 pos)
@@ -267,6 +278,16 @@ void set_text(float x, float y, const char* format, ...)
 void reset_all_text()
 {
   textList.clear();
+}
+
+void reset_text_area(float x, float y, float width, float height)
+{
+  const glm::vec2 min = screen_coord_to_clip_coord(glm::vec2(x, y));
+  const glm::vec2 max = screen_coord_to_clip_coord(glm::vec2(x + width, y + height));
+  const auto itr = std::remove_if(textList.begin(), textList.end(), [min, max](const text_info& e) {
+    return (e.pos.x >= min.x) && (e.pos.x < max.x) && (e.pos.y >= min.y) && (e.pos.y < max.y);
+  });
+  textList.erase(itr, textList.end());
 }
 
 void set_image(int no, float x, float y, const char* filename)
@@ -392,6 +413,7 @@ int select(float x, float y, int count, const char* a, const char* b, ...)
 
   const glm::vec2 textPosOrigin = screen_coord_to_clip_coord(glm::vec2(x, y));
   int select = 0;
+  float timer = 0;
   GLFWEW::Window& window = GLFWEW::Window::Instance();
   main_loop([&] {
     const GamePad gamepad = window.GetGamePad();
@@ -399,12 +421,19 @@ int select(float x, float y, int count, const char* a, const char* b, ...)
       if (--select < 0) {
         select = static_cast<int>(selectionList.size() - 1);
       }
+      timer = 0;
     } else if (gamepad.buttonDown & GamePad::DPAD_DOWN) {
       if (++select >= static_cast<int>(selectionList.size())) {
         select = 0;
       }
+      timer = 0;
     } else if (gamepad.buttonDown & (GamePad::A | GamePad::START)) {
       return true;
+    }
+
+    timer += window.DeltaTime();
+    if (timer >= 1) {
+      timer -= 1;
     }
 
     fontRenderer.Color(glm::vec4(1));
@@ -416,7 +445,7 @@ int select(float x, float y, int count, const char* a, const char* b, ...)
     glm::vec2 textPos(textPosOrigin);
     const float nextLineOffset = 32.0f / static_cast<float>(window.Height() / 2);
     for (int i = 0; i < static_cast<int>(selectionList.size()); ++i) {
-      fontRenderer.Color(i == select ? glm::vec4(1, 1, 1, 1) : glm::vec4(0.5f, 0.5f, 0.5f, 1));
+      fontRenderer.Color(i == select && timer < 0.5f ? glm::vec4(1, 1, 1, 1) : glm::vec4(0.5f, 0.5f, 0.5f, 1));
       fontRenderer.AddString(textPos, selectionList[i].c_str());
       textPos.y -= nextLineOffset;
     }
@@ -424,6 +453,261 @@ int select(float x, float y, int count, const char* a, const char* b, ...)
     return false;
   });
   return select;
+}
+
+int select_range(float x, float y, int min, int max)
+{
+  const glm::vec2 textPosOrigin = screen_coord_to_clip_coord(glm::vec2(x, y));
+  int select = 0;
+  GLFWEW::Window& window = GLFWEW::Window::Instance();
+  float timer = 0;
+  main_loop([&] {
+    const GamePad gamepad = window.GetGamePad();
+    const int unit = (gamepad.buttons & (GamePad::L | GamePad::R)) ? 10 : 1;
+    if (gamepad.buttonDown & GamePad::DPAD_UP) {
+      select -= unit;
+      if (select < min) {
+        select = min;
+      }
+      timer = 0;
+    } else if (gamepad.buttonDown & GamePad::DPAD_DOWN) {
+      select += unit;
+      if (select > max) {
+        select = max;
+      }
+      timer = 0;
+    } else if (gamepad.buttonDown & (GamePad::A | GamePad::START)) {
+      return true;
+    }
+
+    timer += window.DeltaTime();
+    if (timer >= 1) {
+      timer -= 1;
+    }
+
+    fontRenderer.Color(glm::vec4(1));
+    fontRenderer.MapBuffer();
+    for (const auto& e : textList) {
+      fontRenderer.AddString(e.pos, e.text.c_str());
+    }
+
+    const float nextLineOffset = 32.0f / static_cast<float>(window.Height() / 2);
+    std::wstring str;
+    int i = select;
+    for (int j = max; j > 0; j /= 10) {
+      str.push_back(L'0' + i % 10);
+      i /= 10;
+    }
+    std::reverse(str.begin(), str.end());
+
+    fontRenderer.Color(timer < 0.5f ? glm::vec4(1, 1, 1, 1) : glm::vec4(0.5f, 0.5f, 0.5f, 1));
+    fontRenderer.AddString(textPosOrigin, str.c_str());
+    fontRenderer.UnmapBuffer();
+    return false;
+  });
+  return select;
+}
+
+void select_string(float x, float y, int max, char* buffer)
+{
+  enum {
+    kana,
+    dakuten,
+    han_dakuten,
+    minus,
+    space,
+    kana_switch,
+    submit,
+  };
+  struct char_data {
+    wchar_t str[4];
+    wchar_t daku, handaku;
+    int8_t x, y;
+    int8_t type;
+  };
+  static const char_data charTable[] = {
+  { L"Ç†", 0, 0, 0, 0, kana },    { L"Ç¢", 0, 0, 1, 0, kana },    { L"Ç§", 0, 0, 2, 0, kana },    { L"Ç¶", 0, 0, 3, 0, kana },    { L"Ç®", 0, 0, 4, 0, kana },    { L"ÇÕ", L'ÇŒ', L'Çœ', 6, 0, kana },{ L"Ç–", L'Ç—', L'Ç“', 7, 0, kana },{ L"Ç”", L'Ç‘', L'Ç’', 8, 0, kana },{ L"Ç÷", L'Ç◊', L'Çÿ', 9, 0, kana },{ L"ÇŸ", L'Ç⁄', L'Ç€', 10, 0, kana },{ L"ÅJ", 0, 0, 12, 0, dakuten },{ L"ÅK", 0, 0, 13, 0, han_dakuten },
+  { L"Ç©", L'Ç™', 0, 0, 1, kana },{ L"Ç´", L'Ç¨', 0, 1, 1, kana },{ L"Ç≠", L'ÇÆ', 0, 2, 1, kana },{ L"ÇØ", L'Ç∞', 0, 3, 1, kana },{ L"Ç±", L'Ç≤', 0, 4, 1, kana },{ L"Ç‹", 0, 0, 6, 1, kana },        { L"Ç›", 0, 0, 7, 1, kana },        { L"Çﬁ", 0, 0, 8, 1, kana },        { L"Çﬂ", 0, 0, 9, 1, kana },        { L"Ç‡", 0, 0, 10, 1, kana },        { L"Å|", 0, 0, 12, 1, minus },
+  { L"Ç≥", L'Ç¥', 0, 0, 2, kana },{ L"Çµ", L'Ç∂', 0, 1, 2, kana },{ L"Ç∑", L'Ç∏', 0, 2, 2, kana },{ L"Çπ", L'Ç∫', 0, 3, 2, kana },{ L"Çª", L'Çº', 0, 4, 2, kana },{ L"ÇÁ", 0, 0, 6, 2, kana },        { L"ÇË", 0, 0, 7, 2, kana },        { L"ÇÈ", 0, 0, 8, 2, kana },        { L"ÇÍ", 0, 0, 9, 2, kana },        { L"ÇÎ", 0, 0, 10, 2, kana },        { L"ãÛîí", 0, 0, 12, 2, space },
+  { L"ÇΩ", L'Çæ', 0, 0, 3, kana },{ L"Çø", L'Ç¿', 0, 1, 3, kana },{ L"Ç¬", L'Ç√', 0, 2, 3, kana },{ L"Çƒ", L'Ç≈', 0, 3, 3, kana },{ L"Ç∆", L'Ç«', 0, 4, 3, kana },{ L"Ç‚", 0, 0, 6, 3, kana },        { L"Ç‰", 0, 0, 7, 3, kana },        { L"ÇÊ", 0, 0, 8, 3, kana },        { L"ÇÌ", 0, 0, 9, 3, kana },        { L"ÇÒ", 0, 0, 10, 3, kana },        { L"ÉJÉi", 0, 0, 12, 3, kana_switch },
+  { L"Ç»", L'Ç»', 0, 0, 4, kana },{ L"Ç…", 0, 0, 1, 4, kana},     { L"Ç ", 0, 0, 2, 4, kana},     { L"ÇÀ", 0, 0, 3, 4, kana},     { L"ÇÃ", 0, 0, 4, 4, kana},     { L"Ç·", 0, 0, 6, 4, kana },        { L"Ç„", 0, 0, 7, 4, kana },        { L"ÇÂ", 0, 0, 8, 4, kana },        { L"Ç¡", 0, 0, 9, 4, kana },        { L"Ç", 0, 0, 10, 4, kana },        { L"åàíË", 0, 0, 12, 4, submit},
+  };
+  const glm::vec2 textPosOrigin = screen_coord_to_clip_coord(glm::vec2(x, y));
+  GLFWEW::Window& window = GLFWEW::Window::Instance();
+  int select = 0;
+  float timer = 0;
+  bool isKatakana = false;
+  std::wstring tmpBuffer;
+  std::vector<char_data> tmpDataBuffer;
+  tmpBuffer.reserve(max);
+  tmpDataBuffer.reserve(max);
+  main_loop([&] {
+    static const int kana_offset = L'ÉA' - L'Ç†';
+    const GamePad gamepad = window.GetGamePad();
+    if (gamepad.buttonDown & (GamePad::A | GamePad::START)) {
+      const int type = charTable[select].type;
+      if (type == submit) {
+        if (!tmpBuffer.empty()) {
+          const std::string tmp = utf16_to_sjis(tmpBuffer);
+          std::copy_n(tmp.c_str(), tmp.size() + 1, buffer);
+          return true;
+        }
+      } else if (type == kana_switch) {
+        isKatakana = !isKatakana;
+      } else if (static_cast<int>(tmpBuffer.size()) < max) {
+        if (type == space) {
+          tmpBuffer.push_back(L'Å@');
+          tmpDataBuffer.push_back(charTable[select]);
+        } else if (type == minus) {
+          tmpBuffer.push_back(L'Å|');
+          tmpDataBuffer.push_back(charTable[select]);
+        } else if (type == dakuten) {
+          const char_data& data = tmpDataBuffer.back();
+          if (data.daku && !tmpBuffer.empty()) {
+            wchar_t c = tmpBuffer.back();
+            bool isKana = false;
+            if (c == data.str[0] + kana_offset) {
+              c -= kana_offset;
+              isKana = true;
+            }
+            if (c == data.daku) {
+              c = data.str[0];
+            } else {
+              c = data.daku;
+            }
+            if (isKana) {
+              c += kana_offset;
+            }
+            tmpBuffer.back() = c;
+          }
+        } else if (type == han_dakuten) {
+          const char_data& data = tmpDataBuffer.back();
+          if (data.handaku && !tmpBuffer.empty()) {
+            wchar_t c = tmpBuffer.back();
+            bool isKana = false;
+            if (c == data.str[0] + kana_offset) {
+              c -= kana_offset;
+              isKana = true;
+            }
+            if (c == data.handaku) {
+              c = data.str[0];
+            } else {
+              c = data.handaku;
+            }
+            if (isKana) {
+              c += L'ÉA' - L'Ç†';
+            }
+            tmpBuffer.back() = c;
+          }
+        } else {
+          wchar_t c = charTable[select].str[0];
+          if (isKatakana) {
+            c += L'ÉA' - L'Ç†';
+          }
+          tmpBuffer.push_back(c);
+          tmpDataBuffer.push_back(charTable[select]);
+        }
+      }
+    } else if (gamepad.buttonDown & GamePad::B) {
+      tmpBuffer.pop_back();
+      tmpDataBuffer.pop_back();
+    }
+    if (gamepad.buttonDown & GamePad::DPAD_LEFT) {
+      if (select < 12) {
+        if (select == 0) {
+          select = 11;
+        } else {
+          --select;
+        }
+      } else {
+        if ((select - 12) % 11 == 0) {
+          select += 10;
+        } else {
+          --select;
+        }
+      }
+      timer = 0;
+    } else if (gamepad.buttonDown & GamePad::DPAD_RIGHT) {
+      if (select < 12) {
+        if (select == 11) {
+          select = 0;
+        } else {
+          ++select;
+        }
+      } else {
+        if ((select - 12) % 11 == 10) {
+          select -= 10;
+        } else {
+          ++select;
+        }
+      }
+      timer = 0;
+    }
+    if (gamepad.buttonDown & GamePad::DPAD_UP) {
+      if (select < 12) {
+        if (select == 11) {
+          select = 12 + 11 * 4 - 1;
+        } else {
+          select += 12 + 11 * 3;
+        }
+      } else if (select < 12 + 11) {
+        select -= 12;
+      } else {
+        select -= 11;
+      }
+      timer = 0;
+    } else if (gamepad.buttonDown & GamePad::DPAD_DOWN) {
+      if (select >= 12 + 11 * 3) {
+        select -= 12 + 11 * 3;
+      } else if (select == 11) {
+        select += 11;
+      } else if (select < 12) {
+        select += 12;
+      } else {
+        select += 11;
+      }
+      timer = 0;
+    }
+
+    timer += window.DeltaTime();
+    if (timer >= 1) {
+      timer -= 1;
+    }
+
+    fontRenderer.Color(glm::vec4(1));
+    fontRenderer.MapBuffer();
+    for (const auto& e : textList) {
+      fontRenderer.AddString(e.pos, e.text.c_str());
+    }
+
+    std::wstring dispBuffer(tmpBuffer);
+    dispBuffer.insert(dispBuffer.end(), max - tmpBuffer.size(), L'Åñ');
+    fontRenderer.AddString(textPosOrigin, dispBuffer.c_str());
+  
+    const float nextCharOffset = 32.0f / static_cast<float>(window.Width() / 2);
+    const float nextLineOffset = 32.0f / static_cast<float>(window.Height() / 2);
+    for (int i = 0; i < sizeof(charTable) / sizeof(charTable[0]); ++i) {
+      glm::vec4 color(0.5f, 0.5f, 0.5f, 1);
+      if (select == i && timer < 0.5f) {
+        color = {1, 1, 1, 1};
+      }
+      fontRenderer.Color(color);
+      const char_data& e = charTable[i];
+      glm::vec2 textPos(textPosOrigin);
+      textPos.x += e.x * nextCharOffset;
+      textPos.y -= (e.y + 1) * nextLineOffset;
+      if (isKatakana &&  e.str[1] == L'\0' && e.str[0] != L'ÅJ' && e.str[0] != L'ÅK' && e.str[0] != L'Å|') {
+        wchar_t str[2];
+        str[0] = e.str[0] + kana_offset;
+        str[1] = L'\0';
+        fontRenderer.AddString(textPos, str);
+      } else {
+        fontRenderer.AddString(textPos, e.str);
+      }
+    }
+    fontRenderer.UnmapBuffer();
+    return false;
+  });
 }
 
 int random(int min, int max)
