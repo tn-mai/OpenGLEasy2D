@@ -240,6 +240,8 @@ void Window::UpdateGamePad()
       { GLFWBUTTONID_B, GamePad::B },
       { GLFWBUTTONID_X, GamePad::X },
       { GLFWBUTTONID_Y, GamePad::Y },
+      { GLFWBUTTONID_L, GamePad::L },
+      { GLFWBUTTONID_R, GamePad::R },
       { GLFWBUTTONID_Start, GamePad::START },
     };
     for (const auto& e : keyMap) {
@@ -263,6 +265,8 @@ void Window::UpdateGamePad()
       { GLFW_KEY_S, GamePad::B },
       { GLFW_KEY_Z, GamePad::X },
       { GLFW_KEY_X, GamePad::Y },
+      { GLFW_KEY_LEFT_CONTROL, GamePad::L },
+      { GLFW_KEY_LEFT_SHIFT, GamePad::R },
       { GLFW_KEY_ESCAPE, GamePad::ESC },
     };
     for (const auto& e : keyMap) {
