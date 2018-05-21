@@ -197,13 +197,13 @@ void application()
     */
     reset_all_text();
     set_text(-360, 260, "あなた(HP %d/%d)", player_hp, player_hp_max);
-    set_image(10, 0, -100, "goblin.png");
-    scale_image(10, 0.5, 0.5, 0, 0);
+    set_image(100, 0, -100, "goblin.png");
+    scale_image(100, 0.5, 0.5, 0, 0);
 
     // あいこフラグがtrueなら"あいこで"画像を表示. falseなら"じゃんけん"画像を表示.
     const char* aiko_images[] = { "janken.png", "janken_aikode.png" };
-    set_image(11, 0, 400, aiko_images[aiko_flag]);
-    move_image(11, 0, 100, 4, 0.75);
+    set_image(101, 0, 400, aiko_images[aiko_flag]);
+    move_image(101, 0, 100, 4, 0.75);
     wait(0.75);
 
     set_text(-360, 0, "手を選んでください");
@@ -216,18 +216,18 @@ void application()
     // 選んだのがグーなら0が、チョキなら1が、パーなら2がcpu_handに格納される.
     const int cpu_hand = random(0, 2); // 0～2のいずれかの整数が無作為に選ばれる.
 
-    reset_image(11); // "じゃんけん"(または"あいこで")画像を消す.
+    reset_image(101); // "じゃんけん"(または"あいこで")画像を消す.
 
     const char* janken_images[] = { "janken_gu.png", "janken_choki.png", "janken_pa.png" };
     // 左側にプレイヤーの手を表示
-    set_image(12, -200, 100, janken_images[player_hand]);
-    scale_image(12, 0, 0, 0, 0);
-    scale_image(12, 1, 1, 4, 0.25f);
+    set_image(102, -200, 100, janken_images[player_hand]);
+    scale_image(102, 0, 0, 0, 0);
+    scale_image(102, 1, 1, 4, 0.25f);
 
     // 右側にCPUの手を表示
-    set_image(13, 200, 100, janken_images[cpu_hand]);
-    scale_image(13, 0, 0, 0, 0);
-    scale_image(13, 1, 1, 4, 0.25f);
+    set_image(103, 200, 100, janken_images[cpu_hand]);
+    scale_image(103, 0, 0, 0, 0);
+    scale_image(103, 1, 1, 4, 0.25f);
 
     play_sound("kotsudumi1.mp3");
     wait(2); // 2秒間待つ
@@ -241,12 +241,12 @@ void application()
     bool win_flag = false;
     if ((player_hand == 0 && cpu_hand == 1) || (player_hand == 1 && cpu_hand == 2) || (player_hand == 2 && cpu_hand == 0)) {
       play_sound("correct4.mp3");
-      set_image(14, 0, -150, "janken_kachi.png");
+      set_image(104, 0, -150, "janken_kachi.png");
       win_flag = true;
       aiko_flag = false;
     } else if ((player_hand == 0 && cpu_hand == 2) || (player_hand == 1 && cpu_hand == 0) || (player_hand == 2 && cpu_hand == 1)) {
       play_sound("incorrect1.mp3");
-      set_image(14, 0, -150, "janken_make.png");
+      set_image(104, 0, -150, "janken_make.png");
       player_hp -= 1;
       aiko_flag = false;
     } else {
@@ -272,8 +272,10 @@ void application()
       wait_any_key();
       wait(1);
       title_flag = true;
+    } else {
+      wait(1);
     }
-    for (int i = 10; i < 20; ++i) {
+    for (int i = 100; i < 200; ++i) {
       reset_image(i);
     }
   }
