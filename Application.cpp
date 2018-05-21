@@ -47,7 +47,7 @@ const int dungeon_height = 8;
 * 0: ’Ê˜H
 * 1: •Ç
 */
-const char dungeonMap[dungeon_width][dungeon_height] = {
+const char dungeon_map[dungeon_width][dungeon_height] = {
 { 1, 1, 1, 1, 1, 1, 1, 1 },
 { 1, 0, 1, 0, 0, 0, 0, 1 },
 { 1, 0, 1, 1, 1, 0, 1, 1 },
@@ -206,29 +206,29 @@ void application()
     int wall_right[2] = {};
     int wall_front[1] = {};
     if (player_direction == dir_up) {
-      wall_left[0] = dungeonMap[player_y + 0][player_x - 1];
-      wall_left[1] = dungeonMap[player_y - 1][player_x - 1];
-      wall_right[0] = dungeonMap[player_y + 0][player_x + 1];
-      wall_right[1] = dungeonMap[player_y - 1][player_x + 1];
-      wall_front[0] = dungeonMap[player_y - 1][player_x + 0];
+      wall_left[0] = dungeon_map[player_y + 0][player_x - 1];
+      wall_left[1] = dungeon_map[player_y - 1][player_x - 1];
+      wall_right[0] = dungeon_map[player_y + 0][player_x + 1];
+      wall_right[1] = dungeon_map[player_y - 1][player_x + 1];
+      wall_front[0] = dungeon_map[player_y - 1][player_x + 0];
     } else if (player_direction == dir_right) {
-      wall_left[0] = dungeonMap[player_y - 1][player_x + 0];
-      wall_left[1] = dungeonMap[player_y - 1][player_x + 1];
-      wall_right[0] = dungeonMap[player_y + 1][player_x + 0];
-      wall_right[1] = dungeonMap[player_y + 1][player_x + 1];
-      wall_front[0] = dungeonMap[player_y + 0][player_x + 1];
+      wall_left[0] = dungeon_map[player_y - 1][player_x + 0];
+      wall_left[1] = dungeon_map[player_y - 1][player_x + 1];
+      wall_right[0] = dungeon_map[player_y + 1][player_x + 0];
+      wall_right[1] = dungeon_map[player_y + 1][player_x + 1];
+      wall_front[0] = dungeon_map[player_y + 0][player_x + 1];
     } else if (player_direction == dir_down) {
-      wall_left[0] = dungeonMap[player_y + 0][player_x + 1];
-      wall_left[1] = dungeonMap[player_y + 1][player_x + 1];
-      wall_right[0] = dungeonMap[player_y + 0][player_x - 1];
-      wall_right[1] = dungeonMap[player_y + 1][player_x - 1];
-      wall_front[0] = dungeonMap[player_y + 1][player_x + 0];
+      wall_left[0] = dungeon_map[player_y + 0][player_x + 1];
+      wall_left[1] = dungeon_map[player_y + 1][player_x + 1];
+      wall_right[0] = dungeon_map[player_y + 0][player_x - 1];
+      wall_right[1] = dungeon_map[player_y + 1][player_x - 1];
+      wall_front[0] = dungeon_map[player_y + 1][player_x + 0];
     } else if (player_direction == dir_left) {
-      wall_left[0] = dungeonMap[player_y + 1][player_x + 0];
-      wall_left[1] = dungeonMap[player_y + 1][player_x - 1];
-      wall_right[0] = dungeonMap[player_y - 1][player_x + 0];
-      wall_right[1] = dungeonMap[player_y - 1][player_x - 1];
-      wall_front[0] = dungeonMap[player_y + 0][player_x - 1];
+      wall_left[0] = dungeon_map[player_y + 1][player_x + 0];
+      wall_left[1] = dungeon_map[player_y + 1][player_x - 1];
+      wall_right[0] = dungeon_map[player_y - 1][player_x + 0];
+      wall_right[1] = dungeon_map[player_y - 1][player_x - 1];
+      wall_front[0] = dungeon_map[player_y + 0][player_x - 1];
     }
 
     // •Ç‚Ì‚ ‚é•”•ª‚É‰æ‘œ‚ð”z’u.
