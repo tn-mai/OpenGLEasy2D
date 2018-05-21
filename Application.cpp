@@ -264,18 +264,17 @@ void application()
         // ゴールではないので行動を選択する.
         set_text(-360, 0, "どうしますか？");
         const int player_action = select(-360, -40, 4, "前進", "右を向く", "左を向く", "後ろを向く");
-        reset_text_area(-400, -200, 800, 301);
         if (player_action == 0) {
           if (wall_front[0]) {
             // 前方に壁がある場合は進めない.
+            reset_text_area(-400, -200, 800, 301);
             set_text(-360, 0, "壁があって進めない");
             wait(1.5);
           } else {
             // 壁がなければ、プレイヤーの前方へ移動する.
-            const int move_x[] = { 0, 1, 0, -1 };
-            const int move_y[] = { -1, 0, 1, 0 };
-            player_x += move_x[player_direction];
-            player_y += move_y[player_direction];
+            const int move[4][2] = {{ 0, -1 },{ 1, 0 },{ 0, 1 },{ -1, 0 }};
+            player_x += move[player_direction][0];
+            player_y += move[player_direction][1];
             encount_check_flag = true;
           }
         } else {
