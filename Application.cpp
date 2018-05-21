@@ -34,9 +34,6 @@ const int encount_percent = 20;
 // 敵との遭遇判定を行うならtrue. 行わないならfalse.
 bool encount_check_flag = false;
 
-// 戦闘中のときはtrue. そうでなければfalseにする.
-bool battle_flag = false;
-
 // ダンジョンの大きさ
 const int dungeon_width = 8;
 const int dungeon_height = 8;
@@ -65,6 +62,9 @@ const int start_y = 1;
 // ゴールの位置.
 const int goal_x = 3;
 const int goal_y = 1;
+
+// 戦闘中のときはtrue. そうでなければfalse.
+bool battle_flag;
 
 /**
 * アプリケーションの本体.
@@ -106,95 +106,10 @@ void application()
       player_direction = dir_down;
       player_hp = player_hp_max;
       encount_check_flag = false;
-      battle_flag = false;
       aiko_flag = false;
-    }
-  } else if (battle_flag) {
-    /*
-    * じゃんけんバトル 
-    */
-    reset_all_text();
-    set_text(-360, 260, "あなた(HP %d/%d)", player_hp, player_hp_max);
-    set_image(10, 0, -100, "goblin.png");
-    scale_image(10, 0.5, 0.5, 0, 0);
-
-    // あいこフラグがtrueなら"あいこで"画像を表示. falseなら"じゃんけん"画像を表示.
-    const char* aiko_images[] = { "janken.png", "janken_aikode.png" };
-    set_image(11, 0, 400, aiko_images[aiko_flag]);
-    move_image(11, 0, 100, 4, 0.75);
-    wait(0.75);
-
-    set_text(-360, 0, "手を選んでください");
-
-    // プレイヤーの手を選んでもらう.
-    // 選ばれたのがグーなら0が、チョキなら1が、パーなら2がplayer_handに格納される.
-    const int player_hand = select(-360, -40, 3, "グー", "チョキ", "パー");
-
-    // CPUの手を選ぶ.
-    // 選んだのがグーなら0が、チョキなら1が、パーなら2がcpu_handに格納される.
-    const int cpu_hand = random(0, 2); // 0～2のいずれかの整数が無作為に選ばれる.
-
-    reset_image(11); // "じゃんけん"(または"あいこで")画像を消す.
-
-    const char* janken_images[] = { "janken_gu.png", "janken_choki.png", "janken_pa.png" };
-    // 左側にプレイヤーの手を表示
-    set_image(12, -200, 100, janken_images[player_hand]);
-    scale_image(12, 0, 0, 0, 0);
-    scale_image(12, 1, 1, 4, 0.25f);
-
-    // 右側にCPUの手を表示
-    set_image(13, 200, 100, janken_images[cpu_hand]);
-    scale_image(13, 0, 0, 0, 0);
-    scale_image(13, 1, 1, 4, 0.25f);
-
-    play_sound("kotsudumi1.mp3");
-    wait(2); // 2秒間待つ
-
-    // 数値の比較は二重のイコール記号「==」で行う.
-    // 「&&」は「且つ」、「||」は「又は」という意味を持つ記号.
-    // 式の優先順位を調整するには算数と同様にカッコ「()」を使う.
-    // グーは0、チョキは1、パーは2なので、例えばプレイヤーの手が0(グー)でCPUの手が1(チョキ)なら、プレイヤーの勝ちとなる.
-    // 勝ったり負けたりした場合は「あいこ」じゃないのでaiko_flagを「偽」にしておく.
-    // 勝ってもいないし負けてもいない場合は「あいこ」なのでaiko_flagを「真」にしておく.
-    bool win_flag = false;
-    if ((player_hand == 0 && cpu_hand == 1) || (player_hand == 1 && cpu_hand == 2) || (player_hand == 2 && cpu_hand == 0)) {
-      play_sound("correct4.mp3");
-      set_image(14, 0, -150, "janken_kachi.png");
-      win_flag = true;
-      aiko_flag = false;
-    } else if ((player_hand == 0 && cpu_hand == 2) || (player_hand == 1 && cpu_hand == 0) || (player_hand == 2 && cpu_hand == 1)) {
-      play_sound("incorrect1.mp3");
-      set_image(14, 0, -150, "janken_make.png");
-      player_hp -= 1;
-      aiko_flag = false;
-    } else {
-      play_sound("stupid2.mp3");
-      aiko_flag = true;
-    }
-
-    reset_all_text(); // いったんすべての文字を消す.
-
-    // ヒットポイントが変化した可能性があるので表示しなおす.
-    set_text(-360, 260, "あなた(HP %d/%d)", player_hp, player_hp_max);
-
-    if (win_flag) {
       battle_flag = false;
-      set_text(-360, 0, "怪物に勝った！");
-      wait(2);
-    } else if (player_hp <= 0) {
-      battle_flag = false;
-      set_text(-360, 0, "あなたは怪物にやられてしまった…");
-      set_text(-360, -40, "ＧＡＭＥ　ＯＶＥＲ");
-      wait(1);
-      set_text(-360, -80, "(何かキーを押すとタイトルに戻ります)");
-      wait_any_key();
-      wait(1);
-      title_flag = true;
     }
-    for (int i = 10; i < 20; ++i) {
-      reset_image(i);
-    }
-  } else {
+  } else if (!battle_flag) {
     /*
     * ダンジョン探索.
     */
@@ -286,6 +201,91 @@ void application()
           }
         }
       }
+    }
+  } else {
+    /*
+    * じゃんけんバトル.
+    */
+    reset_all_text();
+    set_text(-360, 260, "あなた(HP %d/%d)", player_hp, player_hp_max);
+    set_image(10, 0, -100, "goblin.png");
+    scale_image(10, 0.5, 0.5, 0, 0);
+
+    // あいこフラグがtrueなら"あいこで"画像を表示. falseなら"じゃんけん"画像を表示.
+    const char* aiko_images[] = { "janken.png", "janken_aikode.png" };
+    set_image(11, 0, 400, aiko_images[aiko_flag]);
+    move_image(11, 0, 100, 4, 0.75);
+    wait(0.75);
+
+    set_text(-360, 0, "手を選んでください");
+
+    // プレイヤーの手を選んでもらう.
+    // 選ばれたのがグーなら0が、チョキなら1が、パーなら2がplayer_handに格納される.
+    const int player_hand = select(-360, -40, 3, "グー", "チョキ", "パー");
+
+    // CPUの手を選ぶ.
+    // 選んだのがグーなら0が、チョキなら1が、パーなら2がcpu_handに格納される.
+    const int cpu_hand = random(0, 2); // 0～2のいずれかの整数が無作為に選ばれる.
+
+    reset_image(11); // "じゃんけん"(または"あいこで")画像を消す.
+
+    const char* janken_images[] = { "janken_gu.png", "janken_choki.png", "janken_pa.png" };
+    // 左側にプレイヤーの手を表示
+    set_image(12, -200, 100, janken_images[player_hand]);
+    scale_image(12, 0, 0, 0, 0);
+    scale_image(12, 1, 1, 4, 0.25f);
+
+    // 右側にCPUの手を表示
+    set_image(13, 200, 100, janken_images[cpu_hand]);
+    scale_image(13, 0, 0, 0, 0);
+    scale_image(13, 1, 1, 4, 0.25f);
+
+    play_sound("kotsudumi1.mp3");
+    wait(2); // 2秒間待つ
+
+    // 数値の比較は二重のイコール記号「==」で行う.
+    // 「&&」は「且つ」、「||」は「又は」という意味を持つ記号.
+    // 式の優先順位を調整するには算数と同様にカッコ「()」を使う.
+    // グーは0、チョキは1、パーは2なので、例えばプレイヤーの手が0(グー)でCPUの手が1(チョキ)なら、プレイヤーの勝ちとなる.
+    // 勝ったり負けたりした場合は「あいこ」じゃないのでaiko_flagを「偽」にしておく.
+    // 勝ってもいないし負けてもいない場合は「あいこ」なのでaiko_flagを「真」にしておく.
+    bool win_flag = false;
+    if ((player_hand == 0 && cpu_hand == 1) || (player_hand == 1 && cpu_hand == 2) || (player_hand == 2 && cpu_hand == 0)) {
+      play_sound("correct4.mp3");
+      set_image(14, 0, -150, "janken_kachi.png");
+      win_flag = true;
+      aiko_flag = false;
+    } else if ((player_hand == 0 && cpu_hand == 2) || (player_hand == 1 && cpu_hand == 0) || (player_hand == 2 && cpu_hand == 1)) {
+      play_sound("incorrect1.mp3");
+      set_image(14, 0, -150, "janken_make.png");
+      player_hp -= 1;
+      aiko_flag = false;
+    } else {
+      play_sound("stupid2.mp3");
+      aiko_flag = true;
+    }
+
+    reset_all_text(); // いったんすべての文字を消す.
+
+    // ヒットポイントが変化した可能性があるので表示しなおす.
+    set_text(-360, 260, "あなた(HP %d/%d)", player_hp, player_hp_max);
+
+    if (win_flag) {
+      battle_flag = false;
+      set_text(-360, 0, "怪物に勝った！");
+      wait(2);
+    } else if (player_hp <= 0) {
+      battle_flag = false;
+      set_text(-360, 0, "あなたは怪物にやられてしまった…");
+      set_text(-360, -40, "ＧＡＭＥ　ＯＶＥＲ");
+      wait(1);
+      set_text(-360, -80, "(何かキーを押すとタイトルに戻ります)");
+      wait_any_key();
+      wait(1);
+      title_flag = true;
+    }
+    for (int i = 10; i < 20; ++i) {
+      reset_image(i);
     }
   }
 }
