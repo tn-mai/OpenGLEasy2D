@@ -11,28 +11,53 @@ bool title_flag = true;
 // ひとつのイコール記号は代入を意味する.
 bool aiko_flag = false;
 
-// プレイヤーの勝ち回数.
-int player_win_count = 0;
+// プレイヤーの現在位置.
+int player_x = 1;
+int player_y = 1;
 
-// CPUの勝ち回数.
-int cpu_win_count = 0;
+// プレイヤーの向き.
+const int dir_up = 0;
+const int dir_right = 1;
+const int dir_down = 2;
+const int dir_left = 3;
+int player_direction = dir_down;
 
-int player_hp_max;
-int player_hp;
-int player_mp_max;
-int player_mp;
-int player_attack;
-int player_magic;
-int player_defence;
+// プレイヤーの最大ヒットポイント.
+int player_hp_max = 10;
 
-int enemy_hp;
-int enemy_mp;
-int enemy_attack;
-int enemy_magic;
-int enemy_defence;
+// プレイヤーのヒットポイント.
+int player_hp = player_hp_max;
 
-int player_progress;
-bool next_place;
+// 敵との遭遇判定を行うならtrue. 行わないならfalse.
+bool encount_check_flag = false;
+
+// 戦闘中のときはtrue. そうでなければfalseにする.
+bool battle_flag = false;
+
+// ゴールの位置.
+const int goal_x = 3;
+const int goal_y = 1;
+
+// ダンジョンの大きさ
+const int dungeon_width = 8;
+const int dungeon_height = 8;
+
+/**
+* ダンジョンマップ.
+*
+* 0: 通路
+* 1: 壁
+*/
+const char dungeonMap[dungeon_width][dungeon_height] = {
+{ 1, 1, 1, 1, 1, 1, 1, 1 },
+{ 1, 0, 1, 0, 0, 0, 0, 1 },
+{ 1, 0, 1, 1, 1, 0, 1, 1 },
+{ 1, 0, 0, 0, 1, 0, 0, 1 },
+{ 1, 0, 1, 0, 1, 1, 0, 1 },
+{ 1, 1, 1, 0, 0, 0, 0, 1 },
+{ 1, 0, 0, 0, 1, 0, 1, 1 },
+{ 1, 1, 1, 1, 1, 1, 1, 1 },
+};
 
 /**
 * アプリケーションの本体.
@@ -41,266 +66,245 @@ void application()
 {
   // タイトル画面を表示
   if (title_flag) {
-    title_flag = false;
     /*
-    * この下にタイトル画面のプログラムを追加します.
+    * タイトル画面.
     */
+    reset_all_image();
+    reset_all_text();
     set_image(0, 0, 0, "janken_background.png"); // 背景を表示.
     set_image(1, 0, 500, "janken_title.png");
+    move_image(1, 0, 50, 5, 1.5);
+    scale_image(1, 0.5, 2, 0, 0);
+    scale_image(1, 1, 1, 5, 1.5);
     color_blend_image(1, 1, 1, 1, 0, 0, 0, 0);
     color_blend_image(1, 1, 1, 1, 1, 0, 0, 0.5);
-    scale_image(1, 0.5, 2.0, 0, 0);
-    scale_image(1, 1, 1, 5, 2);
-    move_image(1, 0, 50, 5, 2);
-//    set_text(-100, -100, "Press Any Key");
-    char buffer[20];
-    select_string(-360, 0, 8, buffer);
-    wait_any_key();
-
-    fade_out(0, 0, 0, 1);
-    reset_all_image();
-
-    player_hp_max = 24;
-    player_hp = player_hp_max;
-    player_mp_max = 18;
-    player_mp = player_mp_max;
-    player_attack = 6;
-    player_magic = 5;
-    player_defence = 4;
-    player_progress = 0;
-    next_place = true;
-  }
-
-  /*
-    洞窟に入ってゴブリンと3回戦い、最後にボスと戦う
-    パラメータはHP、MP、攻撃力、魔法力、防御力
-    選択肢は「攻撃、魔法、対魔法防御」
-
-    魔法を使うにはMPが5点必要
-    防御するにはMPが2点必要
-
-    攻撃vs攻撃及び魔法vs魔法は双方のHPが減る
-    防御vs防御は何も起こらない
-    攻撃vs魔法は魔法の勝ち
-    攻撃vs防御は攻撃の勝ち
-    魔法vs防御は防御の勝ち
-
-    攻撃によるダメージは(攻撃力-防御力)
-    魔法は魔法力がそのままダメージとなる
-
-    MPは戦闘終了時に最大5点回復する.
-
-    画面配置
-    +----------------------------------+
-    |HP 12/20               敵HP  3/ 5 |
-    |MP 10/15               敵MP  2/ 2 |
-    |攻撃 6                            |
-    |魔法 4         敵の               |
-    |防御 3         画像               |
-    |                                  |
-    |どうする？                        |
-    |戦う                              |
-    |魔法(必要MP=5)                    |
-    |対魔法防御(必要MP=2)              |
-    +----------------------------------+
-  */
-
-  reset_all_text();
-  set_text(-360, 260, "HP %d/%d", player_hp, player_hp_max);
-  set_text(-360, 220, "MP %d/%d", player_mp, player_mp_max);
-  set_text(-360, 180, "攻撃 %d", player_attack);
-  set_text(-360, 140, "魔法 %d", player_magic);
-  set_text(-360, 100, "防御 %d", player_defence);
-
-  if (next_place) {
-    if (player_progress == 0) {
-      set_image(0, 0, 0, "cave00.jpg");
-      set_image(1, 0, 0, "goblin.png");
-      scale_image(1, 0.5, 0.5, 0, 0);
-      enemy_hp = 7;
-      enemy_mp = 2;
-      enemy_attack = 5;
-      enemy_magic = 2;
-      enemy_defence = 2;
-    } else if (player_progress == 1) {
-      set_image(0, 0, 0, "cave01.jpg");
-      set_image(1, 0, 0, "goblin.png");
-      scale_image(1, 0.6, 0.6, 0, 0);
-      color_blend_image(1, 0, 0, 0.2, 1, 1, 0, 0);
-      enemy_hp = 10;
-      enemy_mp = 5;
-      enemy_attack = 5;
-      enemy_magic = 4;
-      enemy_defence = 3;
-    } else if (player_progress == 2) {
-      set_image(0, 0, 0, "cave02.jpg");
-      set_image(1, 0, 0, "goblin.png");
-      scale_image(1, 0.6, 0.6, 0, 0);
-      color_blend_image(1, 0.2, 0, 0, 1, 1, 0, 0);
-      enemy_hp = 12;
-      enemy_mp = 9;
-      enemy_attack = 6;
-      enemy_magic = 4;
-      enemy_defence = 3;
-    } else {
-      set_image(0, 0, 0, "Cave_26,_Ajanta.jpg");
-      set_image(1, 0, 0, "demon.png");
-      scale_image(1, 0.6, 0.6, 0, 0);
-      color_blend_image(1, 1, 1, 1, 0, 0, 0, 0);
-      color_blend_image(1, 1, 1, 1, 1, 0, 1, 2);
-      enemy_hp = 20;
-      enemy_mp = 14;
-      enemy_attack = 7;
-      enemy_magic = 8;
-      enemy_defence = 4;
-    }
-    fade_in(1);
-    const char* enemy_names[] = { "ゴブリン", "ゴブリンガード", "エルダーゴブリン", "デーモン" };
-    set_text(-360, 0, "%sが現れた", enemy_names[player_progress]);
-    next_place = false;
-    player_progress += 1;
-  }
-
-  //  play_bgm("073.mp3");
-  wait(1);
-
-  // プレイヤーの行動選択.
-  reset_text_area(-400, -299, 800, 300);
-  set_text(-360, 0, "どうする？");
-  int player_action = select(-360, -40, 3, "戦う", "魔法(必要MP=5)", "対魔法防御(必要MP=2)");
-  if (player_action == 1) {
-    if (player_mp < 5) {
-      player_action = 0;
-    } else {
-      player_mp -= 5;
-    }
-  }
-  if (player_action == 2) {
-    if (player_mp < 2) {
-      player_action = 0;
-    } else {
-      player_mp -= 2;
-    }
-  }
-
-  // 敵の行動選択.
-  int enemy_action = random(0, 2);
-  if (enemy_action == 1) {
-    if (enemy_mp < 5) {
-      enemy_action = 0;
-    } else {
-      enemy_mp -= 5;
-    }
-  }
-  if (enemy_action == 2) {
-    if (enemy_mp < 2) {
-      enemy_action = 0;
-    } else {
-      enemy_mp -= 2;
-    }
-  }
-
-  reset_all_text();
-  set_text(-360, 260, "HP %d/%d", player_hp, player_hp_max);
-  set_text(-360, 220, "MP %d/%d", player_mp, player_mp_max);
-  set_text(-360, 180, "攻撃 %d", player_attack);
-  set_text(-360, 140, "魔法 %d", player_magic);
-  set_text(-360, 100, "防御 %d", player_defence);
-
-  if ((player_action != 2 && player_action == enemy_action) || (player_action == 0 && enemy_action == 2) || (player_action == 1 && enemy_action == 0) || (player_action == 2 && enemy_action == 1)) {
-    reset_text_area(-400, -299, 800, 300);
-    set_text(-360, 0, "あなたの攻撃！");
-    wait(1);
-    move_image(1, -10, 0, 1, 0.1);
-    wait(0.1);
-    move_image(1, 10, 0, 1, 0.1);
-    wait(0.1);
-    move_image(1, 0, 0, 1, 0.1);
-    wait(0.5);
-    if (player_action == 0) {
-      enemy_hp -= player_attack - enemy_defence;
-    } else if (player_action == 1) {
-      enemy_hp -= player_magic;
-    } else if (player_magic > enemy_magic) {
-      enemy_hp -= player_magic - enemy_magic;
-    }
-    if (enemy_hp <= 0) {
-      enemy_hp = 0;
-      player_mp = player_mp_max;
-      reset_text_area(-400, -299, 800, 300);
-      set_text(-360, -0, "敵を倒した！");
-      scale_image(1, 1.5, 0, 1, 1);
-      move_image(1, 0, -100, 1, 1);
-      next_place = true;
-    }
-  }
-  if (enemy_hp > 0) {
-    if ((player_action != 2 && player_action == enemy_action) || (player_action == 0 && enemy_action == 1) || (player_action == 1 && enemy_action == 2) || (player_action == 2 && enemy_action == 0)) {
-      bool has_attack = false;
-      if (enemy_action == 0) {
-        player_hp -= enemy_attack - player_defence;
-        has_attack = true;
-      } else if (enemy_action == 1) {
-        player_hp -= player_magic;
-        has_attack = true;
-      } else if (enemy_magic > player_magic) {
-        player_hp -= enemy_magic - player_magic;
-        has_attack = true;
-      }
-      reset_text_area(-400, -299, 800, 300);
-      if (has_attack) {
-        set_text(-360, 0, "敵の攻撃！");
-        wait(1);
-        move_image(0, 0, -10, 1, 0.1);
-        wait(0.1);
-        move_image(0, 0, 10, 1, 0.1);
-        wait(0.1);
-        move_image(0, 0, 0, 1, 0.1);
-        wait(0.5);
-      } else {
-        set_text(-360, 0, "敵の攻撃をかわした！");
-        wait(1);
-      }
-      if (player_hp <= 0) {
-        player_hp = 0;
-        reset_text_area(-400, -299, 800, 300);
-        set_text(-360, 0, "あなたは死んでしまった…");
-      }
-    }
-  }
-  if (player_action == 2 && player_action == enemy_action) {
-    reset_text_area(-400, -299, 800, 300);
-    set_text(-360, 0, "互いに隙をうかがっている");
-  }
-
-  reset_text_area(-400, 1, 800, 300);
-  set_text(-360, 260, "HP %d/%d", player_hp, player_hp_max);
-  set_text(-360, 220, "MP %d/%d", player_mp, player_mp_max);
-  set_text(-360, 180, "攻撃 %d", player_attack);
-  set_text(-360, 140, "魔法 %d", player_magic);
-  set_text(-360, 100, "防御 %d", player_defence);
-  wait(1);
-
-  if (enemy_hp <= 0) {
-    if (player_progress <= 3) {
-      set_text(-360, -40, "あなたは洞窟の奥へと進んだ");
-      wait(1);
+    wait(2);
+    const int yes_or_no = select(-80, -80, 2, "はじめる", "やめる");
+    play_sound("switch1.mp3");
+    // "やめる"が選ばれたらアプリケーションを終了する.
+    if (yes_or_no == 1) {
       fade_out(0, 0, 0, 1);
+      quit(); // アプリケーションを終了させる.
     } else {
-      reset_text_area(-400, -299, 800, 300);
-      set_text(-360, 0, "おめでとう！");
-      set_text(-360, -40, "あなたはついにデーモンを倒した！");
-      set_text(-360, -80, "世界は再び平和になるだろう。");
-      set_text(-360, -120, "PUSH ANY KEY");
+      title_flag = false;
+      fade_out(0, 0, 0, 1);
+      reset_all_text();
+      reset_all_image();
+      play_bgm("073.mp3");
+      fade_in(1);
+
+      // ゲームの初期設定を行う.
+      player_x = 1;
+      player_y = 1;
+      player_direction = dir_down;
+      player_hp = player_hp_max;
+      encount_check_flag = false;
+      battle_flag = false;
+      aiko_flag = false;
+    }
+  } else if (battle_flag) {
+    /*
+    * じゃんけんバトル 
+    */
+    reset_all_text();
+    set_text(-360, 260, "あなた(HP %d/%d)", player_hp, player_hp_max);
+    set_image(10, 0, -100, "goblin.png");
+    scale_image(10, 0.5, 0.5, 0, 0);
+
+    // あいこフラグがtrueなら"あいこで"画像を表示. falseなら"じゃんけん"画像を表示.
+    if (aiko_flag) {
+      set_image(11, 0, 400, "janken_aikode.png");
+    } else {
+      set_image(11, 0, 400, "janken.png");
+    }
+    move_image(11, 0, 100, 4, 0.75);
+    wait(0.75);
+
+    set_text(-360, 0, "手を選んでください");
+
+    // プレイヤーの手を選んでもらう.
+    // 選ばれたのがグーなら0が、チョキなら1が、パーなら2がplayer_handに格納される.
+    const int player_hand = select(-360, -40, 3, "グー", "チョキ", "パー");
+
+    // CPUの手を選ぶ.
+    // 選んだのがグーなら0が、チョキなら1が、パーなら2がcpu_handに格納される.
+    const int cpu_hand = random(0, 2); // 0～2のいずれかの整数が無作為に選ばれる.
+
+    reset_image(11); // "じゃんけん"(または"あいこで")画像を消す.
+
+    // 左側にプレイヤーの手を表示
+    switch (player_hand) {
+    case 0: set_image(12, -200, 100, "janken_gu.png"); break;
+    case 1: set_image(12, -200, 100, "janken_choki.png"); break;
+    case 2: set_image(12, -200, 100, "janken_pa.png"); break;
+    }
+    scale_image(12, 0, 0, 0, 0);
+    scale_image(12, 1, 1, 4, 0.25f);
+
+    // 右側にCPUの手を表示
+    switch (cpu_hand) {
+    case 0: set_image(13, 200, 100, "janken_gu.png"); break;
+    case 1: set_image(13, 200, 100, "janken_choki.png"); break;
+    case 2: set_image(13, 200, 100, "janken_pa.png"); break;
+    }
+    scale_image(13, 0, 0, 0, 0);
+    scale_image(13, 1, 1, 4, 0.25f);
+
+    play_sound("kotsudumi1.mp3");
+    wait(2); // 2秒間待つ
+
+    // 数値の比較は二重のイコール記号「==」で行う.
+    // 「&&」は「且つ」、「||」は「又は」という意味を持つ記号.
+    // 式の優先順位を調整するには算数と同様にカッコ「()」を使う.
+    // グーは0、チョキは1、パーは2なので、例えばプレイヤーの手が0(グー)でCPUの手が1(チョキ)なら、プレイヤーの勝ちとなる.
+    // 勝ったり負けたりした場合は「あいこ」じゃないのでaiko_flagを「偽」にしておく.
+    // 勝ってもいないし負けてもいない場合は「あいこ」なのでaiko_flagを「真」にしておく.
+    bool win_flag = false;
+    if ((player_hand == 0 && cpu_hand == 1) || (player_hand == 1 && cpu_hand == 2) || (player_hand == 2 && cpu_hand == 0)) {
+      play_sound("correct4.mp3");
+      set_image(14, 0, -150, "janken_kachi.png");
+      win_flag = true;
+      aiko_flag = false;
+    } else if ((player_hand == 0 && cpu_hand == 2) || (player_hand == 1 && cpu_hand == 0) || (player_hand == 2 && cpu_hand == 1)) {
+      play_sound("incorrect1.mp3");
+      set_image(14, 0, -150, "janken_make.png");
+      player_hp -= 1;
+      aiko_flag = false;
+    } else {
+      play_sound("stupid2.mp3");
+      aiko_flag = true;
+    }
+
+    reset_all_text(); // いったんすべての文字を消す.
+
+    // ヒットポイントが変化した可能性があるので表示しなおす.
+    set_text(-360, 260, "あなた(HP %d/%d)", player_hp, player_hp_max);
+
+    if (win_flag) {
+      battle_flag = false;
+      set_text(-360, 0, "怪物に勝った！");
+      wait(2);
+    } else if (player_hp <= 0) {
+      battle_flag = false;
+      set_text(-360, 0, "あなたは怪物にやられてしまった…");
+      set_text(-360, -40, "ＧＡＭＥ　ＯＶＥＲ");
+      wait(1);
+      set_text(-360, -80, "(何かキーを押すとタイトルに戻ります)");
       wait_any_key();
+      wait(1);
       title_flag = true;
     }
-  }
+    for (int i = 10; i < 20; ++i) {
+      reset_image(i);
+    }
+  } else {
+    /*
+    * ダンジョン探索.
+    */
+    reset_all_image();
+    reset_all_text();
 
-  if (player_hp <= 0) {
-    set_text(-360, -40, "PUSH ANY KEY");
-    wait_any_key();
-    title_flag = true;
-    wait(0.5);
+    // 方向に応じて壁の有無を調べる.
+    int wall_left[2] = {};
+    int wall_right[2] = {};
+    int wall_front[1] = {};
+    if (player_direction == dir_up) {
+      wall_left[0] = dungeonMap[player_y + 0][player_x - 1];
+      wall_left[1] = dungeonMap[player_y - 1][player_x - 1];
+      wall_right[0] = dungeonMap[player_y + 0][player_x + 1];
+      wall_right[1] = dungeonMap[player_y - 1][player_x + 1];
+      wall_front[0] = dungeonMap[player_y - 1][player_x + 0];
+    } else if (player_direction == dir_right) {
+      wall_left[0] = dungeonMap[player_y - 1][player_x + 0];
+      wall_left[1] = dungeonMap[player_y - 1][player_x + 1];
+      wall_right[0] = dungeonMap[player_y + 1][player_x + 0];
+      wall_right[1] = dungeonMap[player_y + 1][player_x + 1];
+      wall_front[0] = dungeonMap[player_y + 0][player_x + 1];
+    } else if (player_direction == dir_down) {
+      wall_left[0] = dungeonMap[player_y + 0][player_x + 1];
+      wall_left[1] = dungeonMap[player_y + 1][player_x + 1];
+      wall_right[0] = dungeonMap[player_y + 0][player_x - 1];
+      wall_right[1] = dungeonMap[player_y + 1][player_x - 1];
+      wall_front[0] = dungeonMap[player_y + 1][player_x + 0];
+    } else if (player_direction == dir_left) {
+      wall_left[0] = dungeonMap[player_y + 1][player_x + 0];
+      wall_left[1] = dungeonMap[player_y + 1][player_x - 1];
+      wall_right[0] = dungeonMap[player_y - 1][player_x + 0];
+      wall_right[1] = dungeonMap[player_y - 1][player_x - 1];
+      wall_front[0] = dungeonMap[player_y + 0][player_x - 1];
+    }
+
+    // 壁のある部分に画像を配置.
+    set_image(0, 0, 0, "dungeon_background.png");
+    if (wall_left[1]) {
+      set_image(1, 0, 0, "dungeon_left_wall_1.png");
+    }
+    if (wall_left[0]) {
+      set_image(2, 0, 0, "dungeon_left_wall_0.png");
+    }
+    if (wall_right[1]) {
+      set_image(3, 0, 0, "dungeon_right_wall_1.png");
+    }
+    if (wall_right[0]) {
+      set_image(4, 0, 0, "dungeon_right_wall_0.png");
+    }
+    if (wall_front[0]) {
+      set_image(5, 0, 0, "dungeon_front_wall_0.png");
+    }
+
+    // 現在位置と向きを表示.
+    const char* const direction_text[] = { "北", "東", "南", "西" };
+    set_text(-360, 260, "(%d, %d) %s", player_x, player_y, direction_text[player_direction]);
+
+    // 確率で敵と遭遇.
+    if (encount_check_flag) {
+      encount_check_flag = false;
+      const int encount_percent = random(0, 99);
+      if (encount_percent < 30) {
+        set_text(-360, 0, "怪物に見つかった！");
+        wait(2);
+        battle_flag = true;
+      }
+    }
+    if (battle_flag == false) {
+      if (player_x == goal_x && player_y == goal_y) {
+        // ゴールに到達したのでメッセージを表示してタイトルに戻る.
+        set_text(-360, 0, "出口だ！");
+        set_text(-360, -40, "おめでとう！");
+        set_text(-360, -80, "あなたはダンジョンからの脱出に成功した！");
+        set_text(-360, -120, "ＧＡＭＥ　ＣＬＥＡＲ");
+        wait(1);
+        set_text(-360, -160, "(何かキーを押すとタイトルに戻ります)");
+        title_flag = true;
+        wait_any_key();
+        wait(1);
+      } else {
+        // ゴールではないので行動を選択する.
+        set_text(-360, 0, "どうしますか？");
+        const int player_action = select(-360, -40, 4, "前進", "右を向く", "左を向く", "後ろを向く");
+        reset_text_area(-400, -200, 800, 301);
+        if (player_action == 0) {
+          if (wall_front[0]) {
+            // 前方に壁がある場合は進めない.
+            set_text(-360, 0, "壁があって進めない");
+            wait(1.5);
+          } else {
+            // 壁がなければ、プレイヤーの前方へ移動する.
+            const int move_x[] = { 0, 1, 0, -1 };
+            const int move_y[] = { -1, 0, 1, 0 };
+            player_x += move_x[player_direction];
+            player_y += move_y[player_direction];
+            encount_check_flag = true;
+          }
+        } else {
+          // プレイヤーの向きを変える.
+          const int rotation_count[] = { 0, 1, 3, 2 };
+          player_direction += rotation_count[player_action];
+          if (player_direction >= 4) {
+            player_direction -= 4;
+          }
+        }
+      }
+    }
   }
 }
