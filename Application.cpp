@@ -31,9 +31,6 @@ int player_hp;
 // 敵との遭遇確率.
 const int encount_percent = 20;
 
-// 敵との遭遇判定を行うならtrue. 行わないならfalse.
-bool encount_check_flag = false;
-
 // ダンジョンの大きさ
 const int dungeon_width = 8;
 const int dungeon_height = 8;
@@ -105,7 +102,6 @@ void application()
       player_y = start_y;
       player_direction = dir_down;
       player_hp = player_hp_max;
-      encount_check_flag = false;
       aiko_flag = false;
       battle_flag = false;
     }
@@ -155,15 +151,11 @@ void application()
     set_text(-360, 260, "(%d, %d) %s", player_x, player_y, direction_text[player_direction]);
 
     // 確率で敵と遭遇.
-    if (encount_check_flag) {
-      encount_check_flag = false;
-      if (random(0, 99) < encount_percent) {
-        set_text(-360, 0, "怪物に見つかった！");
-        wait(2);
-        battle_flag = true;
-      }
-    }
-    if (battle_flag == false) {
+    if (random(0, 99) < encount_percent) {
+      set_text(-360, 0, "怪物に見つかった！");
+      wait(2);
+      battle_flag = true;
+    } else {
       if (player_x == goal_x && player_y == goal_y) {
         // ゴールに到達したのでメッセージを表示してタイトルに戻る.
         set_text(-360, 0, "出口だ！");
@@ -190,7 +182,6 @@ void application()
             const int move[4][2] = {{ 0, -1 },{ 1, 0 },{ 0, 1 },{ -1, 0 }};
             player_x += move[player_direction][0];
             player_y += move[player_direction][1];
-            encount_check_flag = true;
           }
         } else {
           // プレイヤーの向きを変える.
