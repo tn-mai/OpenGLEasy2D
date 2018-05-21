@@ -205,31 +205,17 @@ void application()
     int wall_left[2] = {};
     int wall_right[2] = {};
     int wall_front[1] = {};
-    if (player_direction == dir_up) {
-      wall_left[0] = dungeon_map[player_y + 0][player_x - 1];
-      wall_left[1] = dungeon_map[player_y - 1][player_x - 1];
-      wall_right[0] = dungeon_map[player_y + 0][player_x + 1];
-      wall_right[1] = dungeon_map[player_y - 1][player_x + 1];
-      wall_front[0] = dungeon_map[player_y - 1][player_x + 0];
-    } else if (player_direction == dir_right) {
-      wall_left[0] = dungeon_map[player_y - 1][player_x + 0];
-      wall_left[1] = dungeon_map[player_y - 1][player_x + 1];
-      wall_right[0] = dungeon_map[player_y + 1][player_x + 0];
-      wall_right[1] = dungeon_map[player_y + 1][player_x + 1];
-      wall_front[0] = dungeon_map[player_y + 0][player_x + 1];
-    } else if (player_direction == dir_down) {
-      wall_left[0] = dungeon_map[player_y + 0][player_x + 1];
-      wall_left[1] = dungeon_map[player_y + 1][player_x + 1];
-      wall_right[0] = dungeon_map[player_y + 0][player_x - 1];
-      wall_right[1] = dungeon_map[player_y + 1][player_x - 1];
-      wall_front[0] = dungeon_map[player_y + 1][player_x + 0];
-    } else if (player_direction == dir_left) {
-      wall_left[0] = dungeon_map[player_y + 1][player_x + 0];
-      wall_left[1] = dungeon_map[player_y + 1][player_x - 1];
-      wall_right[0] = dungeon_map[player_y - 1][player_x + 0];
-      wall_right[1] = dungeon_map[player_y - 1][player_x - 1];
-      wall_front[0] = dungeon_map[player_y + 0][player_x - 1];
-    }
+    const int wall_check_list[][5][2] = {
+    { {  0, -1 },{ -1, -1 },{  0,  1 },{ -1,  1 },{ -1,  0 } },
+    { { -1,  0 },{ -1,  1 },{  1,  0 },{  1,  1 },{  0,  1 } },
+    { {  0,  1 },{  1,  1 },{  0, -1 },{  1, -1 },{  1,  0 } },
+    { {  1,  0 },{  1, -1 },{ -1,  0 },{ -1, -1 },{  0, -1 } },
+    };
+    wall_left[0]  = dungeon_map[player_y + wall_check_list[player_direction][0][0]][player_x + wall_check_list[player_direction][0][1]];
+    wall_left[1]  = dungeon_map[player_y + wall_check_list[player_direction][1][0]][player_x + wall_check_list[player_direction][1][1]];
+    wall_right[0] = dungeon_map[player_y + wall_check_list[player_direction][2][0]][player_x + wall_check_list[player_direction][2][1]];
+    wall_right[1] = dungeon_map[player_y + wall_check_list[player_direction][3][0]][player_x + wall_check_list[player_direction][3][1]];
+    wall_front[0] = dungeon_map[player_y + wall_check_list[player_direction][4][0]][player_x + wall_check_list[player_direction][4][1]];
 
     // •Ç‚Ì‚ ‚é•”•ª‚É‰æ‘œ‚ð”z’u.
     set_image(0, 0, 0, "dungeon_background.png");
