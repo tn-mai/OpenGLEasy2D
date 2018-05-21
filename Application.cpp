@@ -112,11 +112,8 @@ void application()
     scale_image(10, 0.5, 0.5, 0, 0);
 
     // あいこフラグがtrueなら"あいこで"画像を表示. falseなら"じゃんけん"画像を表示.
-    if (aiko_flag) {
-      set_image(11, 0, 400, "janken_aikode.png");
-    } else {
-      set_image(11, 0, 400, "janken.png");
-    }
+    const char* aiko_images[] = { "janken.png", "janken_aikode.png" };
+    set_image(11, 0, 400, aiko_images[aiko_flag]);
     move_image(11, 0, 100, 4, 0.75);
     wait(0.75);
 
@@ -132,21 +129,14 @@ void application()
 
     reset_image(11); // "じゃんけん"(または"あいこで")画像を消す.
 
+    const char* janken_images[] = { "janken_gu.png", "janken_choki.png", "janken_pa.png" };
     // 左側にプレイヤーの手を表示
-    switch (player_hand) {
-    case 0: set_image(12, -200, 100, "janken_gu.png"); break;
-    case 1: set_image(12, -200, 100, "janken_choki.png"); break;
-    case 2: set_image(12, -200, 100, "janken_pa.png"); break;
-    }
+    set_image(12, -200, 100, janken_images[player_hand]);
     scale_image(12, 0, 0, 0, 0);
     scale_image(12, 1, 1, 4, 0.25f);
 
     // 右側にCPUの手を表示
-    switch (cpu_hand) {
-    case 0: set_image(13, 200, 100, "janken_gu.png"); break;
-    case 1: set_image(13, 200, 100, "janken_choki.png"); break;
-    case 2: set_image(13, 200, 100, "janken_pa.png"); break;
-    }
+    set_image(13, 200, 100, janken_images[cpu_hand]);
     scale_image(13, 0, 0, 0, 0);
     scale_image(13, 1, 1, 4, 0.25f);
 
