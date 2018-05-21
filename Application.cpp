@@ -28,6 +28,9 @@ int player_hp_max = 10;
 // プレイヤーのヒットポイント.
 int player_hp = player_hp_max;
 
+// 敵との遭遇確率.
+const int encount_percent = 20;
+
 // 敵との遭遇判定を行うならtrue. 行わないならfalse.
 bool encount_check_flag = false;
 
@@ -249,8 +252,7 @@ void application()
     // 確率で敵と遭遇.
     if (encount_check_flag) {
       encount_check_flag = false;
-      const int encount_percent = random(0, 99);
-      if (encount_percent < 30) {
+      if (random(0, 99) < encount_percent) {
         set_text(-360, 0, "怪物に見つかった！");
         wait(2);
         battle_flag = true;
