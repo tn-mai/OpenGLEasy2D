@@ -12,21 +12,21 @@ bool title_flag = true;
 bool aiko_flag = false;
 
 // プレイヤーの現在位置.
-int player_x = 1;
-int player_y = 1;
+int player_x;
+int player_y;
 
 // プレイヤーの向き.
 const int dir_up = 0;
 const int dir_right = 1;
 const int dir_down = 2;
 const int dir_left = 3;
-int player_direction = dir_down;
+int player_direction;
 
 // プレイヤーの最大ヒットポイント.
-int player_hp_max = 10;
+const int player_hp_max = 10;
 
 // プレイヤーのヒットポイント.
-int player_hp = player_hp_max;
+int player_hp;
 
 // 敵との遭遇確率.
 const int encount_percent = 20;
@@ -36,10 +36,6 @@ bool encount_check_flag = false;
 
 // 戦闘中のときはtrue. そうでなければfalseにする.
 bool battle_flag = false;
-
-// ゴールの位置.
-const int goal_x = 3;
-const int goal_y = 1;
 
 // ダンジョンの大きさ
 const int dungeon_width = 8;
@@ -61,6 +57,14 @@ const char dungeonMap[dungeon_width][dungeon_height] = {
 { 1, 0, 0, 0, 1, 0, 1, 1 },
 { 1, 1, 1, 1, 1, 1, 1, 1 },
 };
+
+// スタートの位置.
+const int start_x = 1;
+const int start_y = 1;
+
+// ゴールの位置.
+const int goal_x = 3;
+const int goal_y = 1;
 
 /**
 * アプリケーションの本体.
@@ -97,8 +101,8 @@ void application()
       fade_in(1);
 
       // ゲームの初期設定を行う.
-      player_x = 1;
-      player_y = 1;
+      player_x = start_x;
+      player_y = start_y;
       player_direction = dir_down;
       player_hp = player_hp_max;
       encount_check_flag = false;
