@@ -455,7 +455,7 @@ int select(float x, float y, int count, const char* a, const char* b, ...)
   return select;
 }
 
-int select_range(float x, float y, int min, int max)
+int select_number(float x, float y, int min, int max)
 {
   const glm::vec2 textPosOrigin = screen_coord_to_clip_coord(glm::vec2(x, y));
   int select = 0;

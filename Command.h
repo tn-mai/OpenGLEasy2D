@@ -210,7 +210,7 @@ int select(float x, float y, int count, const char* a, const char* b, ...);
 * 値は上下キーで選択し、決定キー(AボタンorEnterキー)で確定する.
 * LまたはRキー(キーボードの場合左Ctrlキーまたは左Shiftキー)を押しながら上下キーを押すと10刻みで選択できる.
 */
-int select_range(float x, float y, int min, int max);
+int select_number(float x, float y, int min, int max);
 
 /**
 * 文字選択パネルを表示し、選択された文字列を得る.
