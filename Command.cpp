@@ -397,6 +397,44 @@ void wait_any_key()
   });
 }
 
+int wait_game_key(bool trigger)
+{
+  fontRenderer.Color(glm::vec4(1));
+  fontRenderer.MapBuffer();
+  for (const auto& e : textList) {
+    fontRenderer.AddString(e.pos, e.text.c_str());
+  }
+  fontRenderer.UnmapBuffer();
+
+  int result;
+  main_loop([trigger, &result] {
+    GLFWEW::Window& window = GLFWEW::Window::Instance();
+    const GamePad gamepad = window.GetGamePad();
+    static const int keyMap[] = {
+      GamePad::DPAD_UP,
+      GamePad::DPAD_RIGHT,
+      GamePad::DPAD_DOWN,
+      GamePad::DPAD_LEFT,
+      GamePad::START,
+      GamePad::A,
+      GamePad::B,
+      GamePad::X,
+      GamePad::Y,
+      GamePad::L,
+      GamePad::R,
+    };
+    const int buttons = trigger ? gamepad.buttonDown : gamepad.buttons;
+    for (int i = 0; i < sizeof(keyMap) / sizeof(keyMap[0]); ++i) {
+      if (buttons & keyMap[i]) {
+        result = i;
+        return true;
+      }
+    }
+    return false;
+  });
+  return result;
+}
+
 int select(float x, float y, int count, const char* a, const char* b, ...)
 {
   std::vector<std::wstring> selectionList;

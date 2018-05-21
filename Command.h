@@ -177,6 +177,26 @@ void wait(float seconds);
 void wait_any_key();
 
 /**
+* ゲーム操作用のキーが入力されるまで待つ.
+*
+* @param trigger  false キーが押されていれば入力とみなす.
+*                 true  キーが押された瞬間だけを入力とみなす.
+*
+* @retval  0  上キー
+* @retval  1  右キー
+* @retval  2  下キー
+* @retval  3  左キー
+* @retval  4  STARTボタン
+* @retval  5  Aボタン
+* @retval  6  Bボタン
+* @retval  7  Xボタン
+* @retval  8  Yボタン
+* @retval  9  Lボタン
+* @retval 10  Rボタン
+*/
+int wait_game_key(bool trigger);
+
+/**
 * 選択肢を表示して、選択された結果を得る.
 *
 * @param  x     表示開始位置の左端座標.
