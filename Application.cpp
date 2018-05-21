@@ -28,9 +28,6 @@ const int player_hp_max = 10;
 // プレイヤーのヒットポイント.
 int player_hp;
 
-// 敵との遭遇確率.
-const int encount_percent = 20;
-
 // ダンジョンの大きさ
 const int dungeon_width = 8;
 const int dungeon_height = 8;
@@ -62,6 +59,9 @@ const int goal_y = 1;
 
 // 戦闘中のときはtrue. そうでなければfalse.
 bool battle_flag;
+
+// 敵との遭遇確率.
+const int encount_percent = 10;
 
 /**
 * アプリケーションの本体.
@@ -155,41 +155,39 @@ void application()
       set_text(-360, 0, "怪物に見つかった！");
       wait(2);
       battle_flag = true;
+    } else if (player_x == goal_x && player_y == goal_y) {
+      // ゴールに到達したのでメッセージを表示してタイトルに戻る.
+      set_text(-360, 0, "出口だ！");
+      set_text(-360, -40, "おめでとう！");
+      set_text(-360, -80, "あなたはダンジョンからの脱出に成功した！");
+      set_text(-360, -120, "ＧＡＭＥ　ＣＬＥＡＲ");
+      wait(1);
+      set_text(-360, -160, "(何かキーを押すとタイトルに戻ります)");
+      title_flag = true;
+      wait_any_key();
+      wait(1);
     } else {
-      if (player_x == goal_x && player_y == goal_y) {
-        // ゴールに到達したのでメッセージを表示してタイトルに戻る.
-        set_text(-360, 0, "出口だ！");
-        set_text(-360, -40, "おめでとう！");
-        set_text(-360, -80, "あなたはダンジョンからの脱出に成功した！");
-        set_text(-360, -120, "ＧＡＭＥ　ＣＬＥＡＲ");
-        wait(1);
-        set_text(-360, -160, "(何かキーを押すとタイトルに戻ります)");
-        title_flag = true;
-        wait_any_key();
-        wait(1);
-      } else {
-        // ゴールではないので行動を選択する.
-        set_text(-360, 0, "どうしますか？");
-        const int player_action = select(-360, -40, 4, "前進", "右を向く", "左を向く", "後ろを向く");
-        if (player_action == 0) {
-          if (wall_front[0]) {
-            // 前方に壁がある場合は進めない.
-            reset_text_area(-400, -200, 800, 301);
-            set_text(-360, 0, "壁があって進めない");
-            wait(1.5);
-          } else {
-            // 壁がなければ、プレイヤーの前方へ移動する.
-            const int move[4][2] = {{ 0, -1 },{ 1, 0 },{ 0, 1 },{ -1, 0 }};
-            player_x += move[player_direction][0];
-            player_y += move[player_direction][1];
-          }
+      // ゴールではないので行動を選択する.
+      set_text(-360, 0, "どうしますか？");
+      const int player_action = select(-360, -40, 4, "前進", "右を向く", "左を向く", "後ろを向く");
+      if (player_action == 0) {
+        if (wall_front[0]) {
+          // 前方に壁がある場合は進めない.
+          reset_text_area(-400, -200, 800, 301);
+          set_text(-360, 0, "壁があって進めない");
+          wait(1.5);
         } else {
-          // プレイヤーの向きを変える.
-          const int rotation_count[] = { 0, 1, 3, 2 };
-          player_direction += rotation_count[player_action];
-          if (player_direction >= 4) {
-            player_direction -= 4;
-          }
+          // 壁がなければ、プレイヤーの前方へ移動する.
+          const int move[4][2] = {{ 0, -1 },{ 1, 0 },{ 0, 1 },{ -1, 0 }};
+          player_x += move[player_direction][0];
+          player_y += move[player_direction][1];
+        }
+      } else {
+        // プレイヤーの向きを変える.
+        const int rotation_count[] = { 0, 1, 3, 2 };
+        player_direction += rotation_count[player_action];
+        if (player_direction >= 4) {
+          player_direction -= 4;
         }
       }
     }
