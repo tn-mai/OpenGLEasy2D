@@ -43,6 +43,8 @@ public:
   const glm::vec2& Scale() const { return scale; }
   void Rotation(float r) { rotation = r; }
   float Rotation() const { return rotation; }
+  void Shear(float s) { shear = s; }
+  float Shear() const { return shear; }
   const glm::mat4x4& Transform() const { return transform; }
 
   void AddChild(Node*);
@@ -64,6 +66,7 @@ private:
   glm::vec3 position; ///< ƒm[ƒh‚ÌÀ•W.
   glm::vec2 scale = glm::vec2(1, 1); ///< ƒm[ƒh‚ÌŠg‘åk¬—¦.
   float rotation = 0; 
+  float shear = 0;
 
   glm::mat4x4 transform; ///< ƒm[ƒh‚ÌÀ•W•ÏŠ·s—ñ.
   glm::vec3 worldPosition;

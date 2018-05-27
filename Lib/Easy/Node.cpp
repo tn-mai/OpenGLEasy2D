@@ -71,7 +71,10 @@ void Node::UpdateTransform()
   if (parent) {
     parentTransform = parent->Transform();
   }
-  transform = glm::rotate(glm::scale(glm::translate(parentTransform, position), glm::vec3(scale, 1.0f)), rotation, glm::vec3(0, 0, 1));
+  glm::mat4x4 matShear;
+  matShear[1][0] = shear;
+
+  transform = glm::rotate(glm::scale(glm::translate(parentTransform, position), glm::vec3(scale, 1.0f)), rotation, glm::vec3(0, 0, 1)) * matShear;
   worldPosition = transform * glm::vec4(0, 0, 0, 1);
   for (auto& e : children) {
     if (e) {

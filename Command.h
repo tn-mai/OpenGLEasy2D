@@ -111,6 +111,22 @@ void scale_image(int no, float x, float y, int easing, float seconds);
 void rotate_image(int no, float degree, int easing, float seconds);
 
 /**
+* ‰æ‘œ‚ğŒX‚¯‚é.
+*
+* @param  no      ‰æ‘œ‚ÌŠÇ—”Ô†.
+* @param  scale   ŒX‚¯‚é”ä—¦. ƒ}ƒCƒiƒX’l‚ğİ’è‚·‚é‚ÆŒX‚«‚ª‹t‚É‚È‚é.
+* @param  easing  •âŠÔ•û–@:
+*                   0 “™‘¬‚ÅŒX‚­.
+*                   1 ‰Á‘¬‚µ‚È‚ª‚çŒX‚­.
+*                   2 Œ¸‘¬‚µ‚È‚ª‚çŒX‚­.
+*                   3 ‰Á‘¬‚µ‚È‚ª‚çŒX‚«n‚ß‚ÄAŒ¸‘¬‚µ‚È‚ª‚ç’â~‚·‚é.
+*                   4 1‚É—‚Ä‚¢‚é‚ªA­‚µŒX‚«‰ß‚¬‚Ä‚©‚ç–ß‚Á‚Ä‚«‚Ä’â~‚·‚é.
+*                   5 1‚É—‚Ä‚¢‚é‚ªA‰½“x‚©’e‚İ‚È‚©‚ç’â~‚·‚é.
+* @param  seconds “®ìŠÔ(•b).
+*/
+void shear_image(int no, float scale, int easing, float seconds);
+
+/**
 * ‰æ‘œ‚ÆF‚ğ‡¬‚·‚é.
 *
 * @param  no      ‰æ‘œ‚ÌŠÇ—”Ô†.

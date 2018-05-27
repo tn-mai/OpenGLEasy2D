@@ -98,6 +98,7 @@ struct action
 using translate_action = action<glm::vec2>;
 using scale_action = action<glm::vec2>;
 using rotate_action = action<float>;
+using shear_action = action<float>;
 using color_action = action<glm::vec4>;
 
 struct actable_sprite : Sprite
@@ -105,12 +106,14 @@ struct actable_sprite : Sprite
   translate_action translate;
   scale_action scale;
   rotate_action rotate;
+  shear_action shear;
   color_action color;
 
   void init_action() {
     translate.init(Position(), Position(), linear, 0);
     scale.init(Scale(), Scale(), linear, 0);
     rotate.init(Rotation(), Rotation(), linear, 0);
+    shear.init(Shear(), Shear(), linear, 0);
     color.init(Color(), Color(), linear, 0);
   }
 
@@ -119,6 +122,7 @@ struct actable_sprite : Sprite
     Position(glm::vec3(translate.update(delta), 0));
     Scale(scale.update(delta));
     Rotation(rotate.update(delta));
+    Shear(shear.update(delta));
     Color(color.update(delta));
   }
 };
@@ -304,6 +308,7 @@ void set_image(int no, float x, float y, const char* filename)
     spriteBuffer[no].Position(glm::vec3(x, y, 0));
     spriteBuffer[no].Scale(glm::vec2(1, 1));
     spriteBuffer[no].Rotation(0);
+    spriteBuffer[no].Shear(0);
     spriteBuffer[no].Color(glm::vec4(1, 1, 1, 1));
     spriteBuffer[no].ColorMode(BlendMode_Multiply);
 
@@ -330,6 +335,13 @@ void rotate_image(int no, float degree, int easing, float seconds)
   auto& e = spriteBuffer[no];
   e.rotate.init(e.Rotation(), degree * (glm::pi<float>() / 180.0f), easing, seconds);
   e.Rotation(e.rotate.update(0));
+}
+
+void shear_image(int no, float scale, int easing, float seconds)
+{
+  auto& e = spriteBuffer[no];
+  e.shear.init(e.Shear(), scale, easing, seconds);
+  e.Shear(e.shear.update(0));
 }
 
 void color_blend_image(int no, float red, float green, float blue, float alpha, int mode, int easing, float seconds)
