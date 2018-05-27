@@ -14,6 +14,7 @@
 #include <iostream>
 #include <stdarg.h>
 #include <algorithm>
+#include <unordered_map>
 
 bool hasQuitRequest = false;
 
@@ -143,6 +144,8 @@ Sprite rootNode;
 std::vector<actable_sprite> spriteBuffer;
 SpriteRenderer spriteRenderer;
 
+std::unordered_map<std::string, TexturePtr> textureCache;
+
 color_filter colorFilter;
 SpriteRenderer colorFilterRenderer;
 
@@ -242,6 +245,7 @@ void initialize()
 {
   setlocale(LC_CTYPE, "JPN");
   Texture::Initialize();
+  textureCache.reserve(1024);
 
   static const uint32_t planeTexData[] = {
     0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
@@ -299,11 +303,23 @@ void set_image(int no, float x, float y, const char* filename)
   if (no < 0 || no >= static_cast<int>(spriteBuffer.size())) {
     return;
   }
-  std::string str;
-  str.reserve(1024);
-  str += "Res/";
-  str += filename;
-  if (TexturePtr tex = Texture::LoadFromFile(str.c_str())) {
+
+  auto itr = textureCache.find(filename);
+  TexturePtr tex;
+  if (itr != textureCache.end()) {
+    tex = itr->second;
+  } else {
+    std::string str;
+    str.reserve(1024);
+    str += "Res/";
+    str += filename;
+    tex = Texture::LoadFromFile(str.c_str());
+    if (tex) {
+      textureCache.emplace(filename, tex);
+    }
+  }
+
+  if (tex) {
     spriteBuffer[no].Texture(tex);
     spriteBuffer[no].Position(glm::vec3(x, y, 0));
     spriteBuffer[no].Scale(glm::vec2(1, 1));
