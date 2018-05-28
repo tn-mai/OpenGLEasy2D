@@ -40,12 +40,12 @@ const int dungeon_height = 8;
 */
 const char dungeon_map[dungeon_width][dungeon_height] = {
 { 1, 1, 1, 1, 1, 1, 1, 1 },
-{ 1, 0, 1, 0, 0, 0, 0, 1 },
-{ 1, 0, 1, 1, 1, 0, 1, 1 },
+{ 1, 0, 1, 0, 1, 0, 0, 1 },
+{ 1, 0, 1, 2, 1, 1, 0, 1 },
 { 1, 0, 0, 0, 1, 0, 0, 1 },
-{ 1, 0, 1, 0, 1, 1, 0, 1 },
-{ 1, 1, 1, 0, 0, 0, 0, 1 },
-{ 1, 0, 0, 0, 1, 0, 1, 1 },
+{ 1, 0,-1, 0, 0, 0, 1, 1 },
+{ 1, 1, 1, 0, 1, 0, 0, 1 },
+{ 1, 0, 0, 0, 0, 0, 1, 1 },
 { 1, 1, 1, 1, 1, 1, 1, 1 },
 };
 
@@ -57,11 +57,18 @@ const int start_y = 1;
 const int goal_x = 3;
 const int goal_y = 1;
 
+// 鍵の位置.
+const int key_x = 5;
+const int key_y = 1;
+
+// 鍵を持っているか.
+bool has_key = false;
+
 // 戦闘中のときはtrue. そうでなければfalse.
 bool battle_flag;
 
 // 敵との遭遇確率.
-const int encount_percent = 10;
+int encount_percent = 0;
 
 /**
 * アプリケーションの本体.
@@ -94,7 +101,7 @@ void application()
       fade_out(0, 0, 0, 1);
       reset_all_text();
       reset_all_image();
-      play_bgm("073.mp3");
+      play_bgm("Prelude and Action.mp3");
       fade_in(1);
 
       // ゲームの初期設定を行う.
@@ -112,38 +119,123 @@ void application()
     reset_all_image();
     reset_all_text();
 
-    // 方向に応じて壁の有無を調べる.
-    int wall_left[2] = {};
-    int wall_right[2] = {};
-    int wall_front[1] = {};
-    const int wall_check_list[][5][2] = {
-    { {  0, -1 },{ -1, -1 },{  0,  1 },{ -1,  1 },{ -1,  0 } },
-    { { -1,  0 },{ -1,  1 },{  1,  0 },{  1,  1 },{  0,  1 } },
-    { {  0,  1 },{  1,  1 },{  0, -1 },{  1, -1 },{  1,  0 } },
-    { {  1,  0 },{  1, -1 },{ -1,  0 },{ -1, -1 },{  0, -1 } },
-    };
-    wall_left[0]  = dungeon_map[player_y + wall_check_list[player_direction][0][0]][player_x + wall_check_list[player_direction][0][1]];
-    wall_left[1]  = dungeon_map[player_y + wall_check_list[player_direction][1][0]][player_x + wall_check_list[player_direction][1][1]];
-    wall_right[0] = dungeon_map[player_y + wall_check_list[player_direction][2][0]][player_x + wall_check_list[player_direction][2][1]];
-    wall_right[1] = dungeon_map[player_y + wall_check_list[player_direction][3][0]][player_x + wall_check_list[player_direction][3][1]];
-    wall_front[0] = dungeon_map[player_y + wall_check_list[player_direction][4][0]][player_x + wall_check_list[player_direction][4][1]];
+    /*
+    + 方向に応じて壁の有無を調べる.
+    * 調査範囲は前方4マス、左右2マス.
+    */
+    const int vicinity_width = 5;
+    const int vicinity_height = 5;
+    int vicinity_map[vicinity_height][vicinity_width];
+    {
+      const int check_start_offset[4][2] = { {-2, -4},{ 4, -2 },{ 2, 4 },{ -4, 2 } };
+      const int check_advance_x[4][2] = { { 1, 0 },{ 0, 1 },{ -1, 0 },{ 0, -1 } };
+      const int check_advance_y[4][2] = { { 0, 1 },{ -1, 0 },{ 0, -1 },{ 1, 0 } };
+      int x_base = player_x + check_start_offset[player_direction][0];
+      int y_base = player_y + check_start_offset[player_direction][1];
+      for (int i = 0; i < 5; ++i) {
+        int x = x_base;
+        int y = y_base;
+        for (int j = 0; j < 5; ++j) {
+          if (x < 0 || x >= dungeon_width || y < 0 || y >= dungeon_height) {
+            vicinity_map[i][j] = 1;
+          } else {
+            vicinity_map[i][j] = dungeon_map[y][x];
+          }
+          x += check_advance_x[player_direction][0];
+          y += check_advance_x[player_direction][1];
+        }
+        x_base += check_advance_y[player_direction][0];
+        y_base += check_advance_y[player_direction][1];
+      }
+    }
+
+    /*
+    * -1(泉) : 床と天井と泉を描く
+    * 0(通路): 床と天井を描く
+    * 1(壁): 壁を描く
+    * 2(扉): 壁と扉を描く
+    *
+    * 管理番号は左奥から割り振る.
+    */
 
     // 壁のある部分に画像を配置.
+    const float base_scales[vicinity_height] = { 0.0625, 0.125, 0.25, 0.5, 1 };
+    const float ceil_shears[vicinity_width] = { -4, -2, 0, 2, 4 };
+    const float floor_shears[vicinity_width] = { 4, 2, 0, -2, -4 };
+    const float wall_x_scales[vicinity_width] = { 3, 1, 0, -1, -3 };
+    const float ceil_offsets[vicinity_width][2] = { { -1536, 384 },{ -768, 384 },{ 0, 384 },{ 768, 384 },{ 1536, 384 } };
+    const float floor_offsets[vicinity_width][2] = { { -1536, -384 },{ -768, -384 },{ 0, -384 },{ 768, -384 },{ 1536, -384 } };
+    const float floor_object_offsets[vicinity_width][2] = { { -1536, 0 },{ -768, 0 },{ 0, 0 },{ 768, 0 },{ 1536, 0 } };
+    const float wall_front_offsets[vicinity_width][2] = { { -1024, 0 },{ -512, 0 },{ 0, 0 },{ 512, 0 },{ 1024, 0 } };
+    const float wall_side_offsets[vicinity_width][2] = { { -1152, 0 },{ -384, 0 },{ 0, 0 },{ 384, 0 },{ 1152, 0 } };
+    const int x_order[vicinity_width] = {0, 1, 4, 3, 2};
+    const float luminances[vicinity_height][vicinity_width] = {
+      { 0.05f, 0.10f, 0.13f, 0.10f, 0.05f },
+      { 0.19f, 0.31f, 0.35f, 0.31f, 0.19f },
+      { 0.39f, 0.52f, 0.57f, 0.52f, 0.39f },
+      { 0.52f, 0.70f, 0.80f, 0.70f, 0.52f },
+      { 0.57f, 0.80f, 1.00f, 0.80f, 0.57f },
+    };
+    int image_no = 1;
     set_image(0, 0, 0, "dungeon_background.png");
-    if (wall_left[1]) {
-      set_image(1, 0, 0, "dungeon_left_wall_1.png");
-    }
-    if (wall_left[0]) {
-      set_image(2, 0, 0, "dungeon_left_wall_0.png");
-    }
-    if (wall_right[1]) {
-      set_image(3, 0, 0, "dungeon_right_wall_1.png");
-    }
-    if (wall_right[0]) {
-      set_image(4, 0, 0, "dungeon_right_wall_0.png");
-    }
-    if (wall_front[0]) {
-      set_image(5, 0, 0, "dungeon_front_wall_0.png");
+    for (int i = 0; i < vicinity_height; ++i) {
+      const float base_scale = base_scales[i];
+      for (int x = 0; x < vicinity_width; ++x) {
+        const int j = x_order[x];
+        const int wall_type = vicinity_map[i][j];
+        const float lum = luminances[i][j];
+        set_image(image_no, 0, 0, "dungeon_ceil.png");
+        move_image(image_no, ceil_offsets[j][0] * base_scale, ceil_offsets[j][1] * base_scale, 0, 0);
+        scale_image(image_no, base_scale, base_scale, 0, 0);
+        shear_image(image_no, ceil_shears[j], 0, 0);
+        color_blend_image(image_no, lum, lum, lum, 1, 0, 0, 0);
+        ++image_no;
+        set_image(image_no, 0, 0, "dungeon_floor.png");
+        move_image(image_no, floor_offsets[j][0] * base_scale, floor_offsets[j][1] * base_scale, 0, 0);
+        scale_image(image_no, base_scale, base_scale, 0, 0);
+        shear_image(image_no, floor_shears[j], 0, 0);
+        color_blend_image(image_no, lum, lum, lum, 1, 0, 0, 0);
+        ++image_no;
+        if (wall_type == -1) {
+          set_image(image_no, 0, 0, "dungeon_spring.png");
+          move_image(image_no, floor_object_offsets[j][0] * base_scale, floor_object_offsets[j][1] * base_scale, 0, 0);
+          scale_image(image_no, base_scale, base_scale, 0, 0);
+          color_blend_image(image_no, lum, lum, lum, 1, 0, 0, 0);
+          ++image_no;
+        } else if (wall_type > 0) {
+          if (i < vicinity_height - 1) {
+            const float front_lum = luminances[i + 1][j];
+            const float front_scale = base_scale * 2;
+            set_image(image_no, 0, 0, "dungeon_wall_front.png");
+            move_image(image_no, wall_front_offsets[j][0] * front_scale, wall_front_offsets[j][1] * front_scale, 0, 0);
+            scale_image(image_no, front_scale, front_scale, 0, 0);
+            color_blend_image(image_no, front_lum, front_lum, front_lum, 1, 0, 0, 0);
+            ++image_no;
+            if (wall_type == 2) {
+              set_image(image_no, 0, 0, "dungeon_door_front.png");
+              move_image(image_no, wall_front_offsets[j][0] * front_scale, wall_front_offsets[j][1] * front_scale, 0, 0);
+              scale_image(image_no, front_scale, front_scale, 0, 0);
+              color_blend_image(image_no, front_lum, front_lum, front_lum, 1, 0, 0, 0);
+              ++image_no;
+            }
+          }
+          if (j != 2) {
+            const float x_scale = wall_x_scales[j] * base_scale;
+            set_image(image_no, 0, 0, "dungeon_wall_side.png");
+            move_image(image_no, wall_side_offsets[j][0] * base_scale, wall_side_offsets[j][1] * base_scale, 0, 0);
+            scale_image(image_no, x_scale, base_scale, 0, 0);
+            color_blend_image(image_no, lum, lum, lum, 1, 0, 0, 0);
+            ++image_no;
+            if (wall_type == 2) {
+              set_image(image_no, 0, 0, "dungeon_door_side.png");
+              move_image(image_no, wall_side_offsets[j][0] * base_scale, wall_side_offsets[j][1] * base_scale, 0, 0);
+              scale_image(image_no, x_scale, base_scale, 0, 0);
+              color_blend_image(image_no, lum, lum, lum, 1, 0, 0, 0);
+              ++image_no;
+            }
+          }
+        }
+      }
     }
 
     // 現在位置と向きを表示.
@@ -165,18 +257,47 @@ void application()
       set_text(-360, -160, "(何かキーを押すとタイトルに戻ります)");
       title_flag = true;
       wait_any_key();
+      stop_bgm();
       wait(1);
     } else {
       // ゴールではないので行動を選択する.
+      if (!has_key && player_x == key_x && player_y == key_y) {
+        set_text(-360, 0, "鍵が落ちている.");
+        wait(1);
+        set_text(-360, -40, "鍵を拾いました.");
+        set_text(-360, -80, "(何かキーを押してください)");
+        has_key = true;
+        wait_any_key();
+        reset_text_area(-400, -300, 800, 301);
+      }
       set_text(-360, 0, "どうしますか？");
       const int player_action = select(-360, -40, 4, "前進", "右を向く", "左を向く", "後ろを向く");
       if (player_action == 0) {
-        if (wall_front[0]) {
+        const int front_position[2] = { 2, 3 };
+        const int wall_type = vicinity_map[front_position[1]][front_position[0]];
+        bool can_go_ahead = false;
+        if (wall_type <= 0) {
+          can_go_ahead = true;
+        } else if (wall_type == 1) {
           // 前方に壁がある場合は進めない.
           reset_text_area(-400, -200, 800, 301);
           set_text(-360, 0, "壁があって進めない");
           wait(1.5);
-        } else {
+          can_go_ahead = false;
+        } else if (wall_type == 2) {
+          if (!has_key) {
+            reset_text_area(-400, -300, 800, 301);
+            set_text(-360, 0, "鍵がかかっている.");
+            wait(1.5);
+            can_go_ahead = false;
+          } else {
+            reset_text_area(-400, -200, 800, 301);
+            set_text(-360, 0, "鍵を開けた.");
+            wait(1.5);
+            can_go_ahead = true;
+          }
+        }
+        if (can_go_ahead) {
           // 壁がなければ、プレイヤーの前方へ移動する.
           const int move[4][2] = {{ 0, -1 },{ 1, 0 },{ 0, 1 },{ -1, 0 }};
           player_x += move[player_direction][0];
